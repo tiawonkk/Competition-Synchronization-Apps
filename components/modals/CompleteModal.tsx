@@ -72,9 +72,6 @@ export default function CompleteModal({ taskId, onClose }: { taskId: string | nu
             {touched && !valid && (
               <p className="mt-1 text-xs text-danger">Gunakan tautan https dari drive.google.com, docs.google.com, 1drv.ms, atau SharePoint Binus.</p>
             )}
-            <button type="button" className="mt-2 text-xs text-active hover:underline" onClick={() => setUrl("https://drive.google.com/file/d/bukti-pekerjaan-demo/view")}>
-              Isi tautan contoh
-            </button>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/60">
             Setelah dikonfirmasi: alarm berdering dihentikan, pengingat Google Calendar &amp; Outlook untuk tugas ini dinonaktifkan, dan skor kesiapan dihitung ulang.

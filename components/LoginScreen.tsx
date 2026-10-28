@@ -1,13 +1,12 @@
 "use client";
 
-import { Cloud, LogIn, Mail, Moon, ShieldCheck, Sun, Trophy } from "lucide-react";
+import { Cloud, Mail, Moon, ShieldCheck, Sun, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { uid } from "@/lib/logic";
 import { AVATAR_COLORS } from "@/lib/seed";
 import { useStore } from "@/lib/store";
-import { Avatar } from "./ui";
 
-/** Sign-in screen: Microsoft 365 / Google buttons, plus quick persona switching for multi-user testing. */
+/** Sign-in screen: Microsoft 365 / Google buttons, with sign-up for new accounts. */
 export default function LoginScreen() {
   const { data, dispatch } = useStore();
   const [name, setName] = useState("");
@@ -30,13 +29,11 @@ export default function LoginScreen() {
     }
   }
 
-  const personas = data.users.filter((u) => u.headline);
-
   function signIn(provider: "microsoft" | "google") {
     const mail = email.trim().toLowerCase();
     const fullName = name.trim();
     if (!mail) {
-      setError("Isi email Anda, atau pilih salah satu akun uji di bawah.");
+      setError("Isi email Anda terlebih dahulu.");
       return;
     }
     if (provider === "microsoft" && !mail.endsWith("@binus.ac.id")) {
@@ -127,31 +124,9 @@ export default function LoginScreen() {
           </button>
         </div>
 
-        <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-white/35">
-          <span className="h-px flex-1 bg-white/10" /> Akun uji cepat <span className="h-px flex-1 bg-white/10" />
-        </div>
-
-        <ul className="space-y-2">
-          {personas.map((u) => (
-            <li key={u.id}>
-              <button
-                onClick={() => dispatch({ type: "login", userId: u.id })}
-                className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-left transition hover:border-active/40 hover:bg-active/10"
-              >
-                <Avatar user={u} size={36} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{u.fullName}</span>
-                  <span className="block truncate text-[11px] text-white/50">{u.headline}</span>
-                </span>
-                <LogIn size={16} className="text-white/35" />
-              </button>
-            </li>
-          ))}
-        </ul>
-
         <p className="mt-5 flex items-start gap-2 text-[11px] leading-relaxed text-white/45">
           <ShieldCheck size={14} className="mt-0.5 shrink-0" />
-          Mode demo: data tersimpan di browser ini. Keluar tidak menghapus data, jadi Anda bisa berpindah akun untuk menguji peran Ketua dan Anggota.
+          Mode demo: data tersimpan di browser ini. Keluar tidak menghapus data; masuk lagi dengan email yang sama untuk melanjutkan.
         </p>
       </div>
     </main>

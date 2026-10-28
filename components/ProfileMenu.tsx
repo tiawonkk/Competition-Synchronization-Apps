@@ -2,11 +2,11 @@
 
 import { Check, LogOut, RotateCcw, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { buildSeed } from "@/lib/seed";
+import { emptyData } from "@/lib/seed";
 import { useStore } from "@/lib/store";
 import { Avatar } from "./ui";
 
-/** Account popover: switch between registered users, reset the demo data, or sign out. */
+/** Account popover: switch between registered users, wipe local data, or sign out. */
 export default function ProfileMenu({ children, placement }: { children: (open: boolean) => React.ReactNode; placement: "up" | "down" }) {
   const { data, me, dispatch } = useStore();
   const [open, setOpen] = useState(false);
@@ -64,14 +64,14 @@ export default function ProfileMenu({ children, placement }: { children: (open: 
           <button
             role="menuitem"
             onClick={() => {
-              if (window.confirm("Kembalikan semua data ke contoh awal? Lomba, tugas, dan coretan yang Anda buat akan hilang.")) {
-                dispatch({ type: "reset", data: buildSeed(Date.now()) });
+              if (window.confirm("Hapus semua data di browser ini (akun, lomba, tugas, whiteboard)? Tindakan ini tidak bisa dibatalkan.")) {
+                dispatch({ type: "reset", data: emptyData() });
               }
               setOpen(false);
             }}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-white/70 hover:bg-white/10"
           >
-            <RotateCcw size={14} /> Reset data demo
+            <RotateCcw size={14} /> Hapus semua data
           </button>
           <button
             role="menuitem"

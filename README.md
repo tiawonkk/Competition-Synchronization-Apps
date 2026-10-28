@@ -8,7 +8,7 @@ Aplikasi PWA untuk mahasiswa yang mengikuti beberapa kompetisi sekaligus (Hackat
 
 | Fitur | Keterangan |
 |---|---|
-| **Login & Ganti Akun** | Masuk dengan Microsoft 365 (@binus.ac.id) atau Google (@gmail.com), daftar akun baru, atau pilih akun uji cepat (Ketua, Anggota 2, Anggota 3). Menu profil memungkinkan ganti akun tanpa kehilangan data, dan tombol Keluar mengembalikan ke layar masuk. Di mode demo, tombol penyedia hanya mencocokkan domain email; tidak ada OAuth sungguhan. |
+| **Login & Ganti Akun** | Masuk dengan Microsoft 365 (@binus.ac.id) atau Google (@gmail.com), daftar akun baru, atau Menu profil memungkinkan ganti akun tanpa kehilangan data, dan tombol Keluar mengembalikan ke layar masuk. Di mode demo, tombol penyedia hanya mencocokkan domain email; tidak ada OAuth sungguhan. |
 | **Buat Lomba & Gabung via Kode** | Ketua membuat lomba (kategori, tema, deadline, email Pembina, folder OneDrive/Drive) dan mendapat kode undangan otomatis, misalnya `HACK-88`. Anggota lain memasukkan kode dan memilih peran tim; batas 5 anggota ditegakkan. Tombol AI membuat milestone dan tugas, termasuk poin dari guidebook yang ditempel. |
 | **AI Rescheduler** | Satu klik memindahkan tugas internal yang bentrok (deadline final tidak digeser) ke hari kosong terdekat, lalu menulis log pembaruan kalender. |
 | **Radar Bentrok Jadwal** | Mendeteksi tenggat berat (prioritas Tinggi/Kritis dan deadline final) dari kompetisi berbeda dalam jendela 48 jam, lengkap dengan saran memajukan jadwal internal. |
@@ -36,11 +36,11 @@ npm install
 npm run dev
 ```
 
-Buka http://localhost:3000 (atau port yang ditampilkan terminal). Aplikasi berjalan dengan data contoh; tidak perlu Supabase untuk mencoba UI. Menu profil → **Reset data demo** mengembalikan semuanya ke data awal.
+Buka http://localhost:3000 (atau port yang ditampilkan terminal). Aplikasi berjalan tanpa data bawaan; tidak perlu Supabase untuk mencoba UI. Aplikasi mulai kosong: daftar akun, buat lomba, lalu undang teman dengan kode. Menu profil → **Hapus semua data** mengosongkan data di browser.
 
 Cara mencoba alur utama:
 
-1. Pilih akun uji **Raka Pratama** di layar masuk. Lalu buka **Beranda** dan klik **Optimasi Jadwal Bentrok (AI Rescheduler)** pada Radar Bentrok.
+1. Daftar akun baru, buat dua lomba dengan deadline berdekatan, lalu klik **Optimasi Jadwal Bentrok (AI Rescheduler)** pada Radar Bentrok di **Beranda**.
 2. Klik **Aktifkan Alarm** di header. Alarm berbunyi untuk tugas "Finalisasi user flow & IA", lalu pilih **Konfirmasi Selesai** dan tempel tautan Google Drive/OneDrive. Suara berhenti dan skor kesiapan naik.
 3. Buka kompetisi **Hackathon Nasional AI** → tab **Whiteboard & Ideasi** → tekan **⚡ Jadikan Tugas** pada sebuah catatan.
 4. Buat lomba baru lewat **Buat Lomba Baru**, catat kode undangannya, **Keluar**, daftar akun baru, lalu **Gabung Lomba** dengan kode itu.
@@ -62,7 +62,7 @@ components/
 lib/
   logic.ts                      Skor kesiapan, deteksi bentrok, format tanggal
   alarm.ts                      Alarm Web Audio API + notifikasi browser
-  seed.ts / store.tsx           Data dummy dan state aplikasi
+  seed.ts / store.tsx           Tipe data, konstanta, dan dataset kosong awal; state aplikasi
   report.ts / generator.ts      Pembuat laporan HTML dan jadwal AI
   integrations/                 Kalender, Supabase server, Realtime whiteboard
   auth-and-sync.ts              Helper login Google/Microsoft (Supabase) dan sinkron tugas

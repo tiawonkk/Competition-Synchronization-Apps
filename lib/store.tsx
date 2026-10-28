@@ -2,10 +2,10 @@
 
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
 import { computeReadiness, fmtDateTime, uid, type RescheduleMove } from "./logic";
-import { buildSeed, type AppData } from "./seed";
+import { emptyData, type AppData } from "./seed";
 import type { AdvisorReport, Competition, Member, Milestone, Notice, Resource, Task, User, WhiteboardElement } from "./types";
 
-const STORAGE_KEY = "cs-state-v2";
+const STORAGE_KEY = "cs-state-v3";
 
 type Action =
   | { type: "login"; userId: string }
@@ -189,7 +189,7 @@ function loadSaved(): AppData | null {
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState<AppData | null>(null);
   useEffect(() => {
-    setBoot(loadSaved() ?? buildSeed(Date.now()));
+    setBoot(loadSaved() ?? emptyData());
   }, []);
   if (!boot) {
     return <div className="grid min-h-screen place-items-center text-sm text-white/50">Memuat CompeteSync…</div>;
@@ -235,4 +235,4 @@ export function useStore(): Store {
   return v;
 }
 
-export { buildSeed };
+export { emptyData };

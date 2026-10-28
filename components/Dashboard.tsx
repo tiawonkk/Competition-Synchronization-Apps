@@ -88,7 +88,6 @@ export default function Dashboard({
             <KeyRound size={16} /> Gabung Lomba
           </button>
         </div>
-        <p className="mt-4 text-xs text-white/40">Kode contoh untuk dicoba: GEM-26, HACK-88, CTF-01</p>
       </div>
     );
   }

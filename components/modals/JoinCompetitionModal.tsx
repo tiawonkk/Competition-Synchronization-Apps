@@ -1,10 +1,10 @@
 "use client";
 
-import { CheckCircle2, KeyRound } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TEAM_ROLES } from "@/lib/seed";
 import { useStore } from "@/lib/store";
-import { Badge, Modal } from "../ui";
+import { Modal } from "../ui";
 
 const MAX_TEAM = 5;
 
@@ -52,7 +52,7 @@ export default function JoinCompetitionModal({ open, onClose, onJoined }: { open
                 setError(null);
               }}
               onKeyDown={(e) => e.key === "Enter" && join()}
-              placeholder="mis. HACK-88"
+              placeholder="Kode dari Ketua tim"
               autoFocus
               autoComplete="off"
             />
@@ -71,45 +71,6 @@ export default function JoinCompetitionModal({ open, onClose, onJoined }: { open
               <option key={r}>{r}</option>
             ))}
           </select>
-        </div>
-
-        <div>
-          <span className="label">Kode contoh (klik untuk mencoba)</span>
-          <ul className="space-y-1.5">
-            {data.competitions.map((c) => {
-              const joined = isMember(c.id);
-              const full = teamSize(c.id) >= MAX_TEAM;
-              return (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCode(c.inviteCode);
-                      setError(null);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left transition hover:bg-white/[0.08]"
-                  >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.accent }} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-medium">{c.title}</span>
-                      <span className="text-[10px] text-white/45">
-                        {teamSize(c.id)}/{MAX_TEAM} anggota
-                      </span>
-                    </span>
-                    {joined ? (
-                      <Badge tone="safe">
-                        <CheckCircle2 size={11} /> Sudah gabung
-                      </Badge>
-                    ) : full ? (
-                      <Badge tone="warn">Penuh</Badge>
-                    ) : (
-                      <span className="font-mono text-xs font-semibold tracking-wider text-active">{c.inviteCode}</span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/60">
