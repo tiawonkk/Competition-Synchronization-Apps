@@ -4,6 +4,7 @@ import { Check, FileUp, KeyRound, Loader2, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { extractGuidebookTasks, generatePlan, generatePlanFromGuidebook, type GeneratedPlan } from "@/lib/generator";
 import type { GuidebookDraft } from "@/lib/types";
+import { extractPdfText } from "@/lib/pdf-text";
 import { fmtDate, isValidProofUrl, makeInviteCode, PRIORITY_LABEL } from "@/lib/logic";
 import { isEmail } from "@/lib/passwords";
 import { TEAM_ROLES } from "@/lib/seed";
@@ -84,10 +85,16 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
     setReading(true);
     try {
       const body = new FormData();
-      if (file) body.append("file", file);
-      else body.append("text", guidebook);
+      if (file) {
+        // Prefer the PDF's own text (small, no size limit); only send the file itself when it is a scan without text.
+        const text = await extractPdfText(file).catch(() => "");
+        if (text.length >= 200) body.append("text", text);
+        else if (file.size <= 4 * 1024 * 1024) body.append("file", file);
+        else return setReadError("PDF ini berupa gambar/scan dan lebih dari 4 MB. Kompres PDF-nya, atau tempel teks guidebook secara manual.");
+      } else body.append("text", guidebook);
       const res = await fetch("/api/guidebook", { method: "POST", body });
       const json = (await res.json().catch(() => ({}))) as { draft?: GuidebookDraft; error?: string };
+      if (res.status === 413) return setReadError("Berkas terlalu besar untuk dikirim. Tempel teks guidebook secara manual.");
       if (!res.ok || !json.draft) return setReadError(json.error ?? "Gagal membaca guidebook.");
       const d = json.draft;
       const name = title.trim() || d.title || "";
@@ -207,7 +214,7 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
             <label className="label" htmlFor="c-gb">Guidebook lomba (opsional)</label>
             <label className="btn-ghost w-full cursor-pointer !justify-start">
               {reading ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-              <span className="min-w-0 truncate">{fileName || "Unggah PDF guidebook (maks. 4 MB)"}</span>
+              <span className="min-w-0 truncate">{fileName || "Unggah PDF guidebook"}</span>
               <input
                 type="file"
                 accept="application/pdf"
@@ -234,7 +241,7 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
               <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => readGuidebook()} disabled={reading || guidebook.trim().length < 40}>
                 <Sparkles size={14} className="text-active" /> Baca teks dengan AI
               </button>
-              <span className="text-[11px] text-white/45">PDF/teks dikirim ke Google Gemini. Jangan unggah dokumen rahasia.</span>
+              <span className="text-[11px] text-white/45">Teks guidebook dikirim ke Google Gemini. Jangan unggah dokumen rahasia.</span>
             </div>
             {readError && (
               <p role="alert" className="mt-2 rounded-xl bg-danger/10 px-3 py-2 text-xs text-danger">

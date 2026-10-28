@@ -102,7 +102,7 @@ Semua rute memerlukan header `Authorization: Bearer <access token Supabase>`.
 - `POST /api/advisor-report` dengan `{ "competitionId": "...", "send": false }` mengembalikan pratinjau HTML. Dengan `send: true` (khusus Ketua) laporan dikirim ke `advisor_email` dan dicatat di `advisor_reports`.
 - `GET /api/advisor-report` dengan `Authorization: Bearer <CRON_SECRET>` mengirim laporan untuk kompetisi aktif yang menyalakan Auto-Send (`auto_send_weekly`). Jadwal cron: `0 12 * * 0` (Minggu 19:00 WIB).
 - `POST /api/auth/tokens` dengan `{ provider, refreshToken, email }` menyimpan refresh token penyedia milik pemanggil.
-- `POST /api/guidebook` (multipart `file` PDF maks. 4 MB, atau `text`) membaca guidebook dengan Gemini dan mengembalikan tahapan bertanggal serta daftar tugas. Isi dibersihkan dan dibatasi sebelum dikirim ke klien, dan permintaan dibatasi per IP.
+- `POST /api/guidebook` (multipart `text` hasil ekstraksi PDF di browser, atau `file` PDF scan maks. 4 MB) membaca guidebook dengan Gemini dan mengembalikan tahapan bertanggal serta daftar tugas. Isi dibersihkan dan dibatasi sebelum dikirim ke klien, dan permintaan dibatasi per IP.
 
 ## Deploy ke Vercel
 
