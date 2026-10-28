@@ -4,6 +4,7 @@ import { Check, KeyRound, Loader2, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { extractGuidebookTasks, generatePlan, type GeneratedPlan } from "@/lib/generator";
 import { fmtDate, isValidProofUrl, makeInviteCode, PRIORITY_LABEL } from "@/lib/logic";
+import { isEmail } from "@/lib/passwords";
 import { TEAM_ROLES } from "@/lib/seed";
 import { useStore } from "@/lib/store";
 import { Avatar, Badge, Modal, PRIORITY_TONE } from "../ui";
@@ -43,7 +44,7 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
   const errors = {
     title: !title.trim() && "Nama lomba wajib diisi.",
     deadline: (!deadline || new Date(`${deadline}T23:59:00`).getTime() <= now) && "Pilih tanggal di masa depan.",
-    advisorEmail: !advisorEmail.includes("@") && "Isi email Pembina yang valid.",
+    advisorEmail: advisorEmail.trim() && !isEmail(advisorEmail.trim()) && "Format email belum valid.",
     onedrive: onedrive.trim() && !isValidProofUrl(onedrive) && "Gunakan tautan https dari OneDrive, SharePoint, atau domain Binus.",
     gdrive: gdrive.trim() && !isValidProofUrl(gdrive) && "Gunakan tautan https dari Google Drive.",
   };
@@ -56,7 +57,7 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
         category,
         theme: theme.trim(),
         deadline: new Date(`${deadline}T23:59:00`).toISOString(),
-        advisorName: advisorName.trim() || "Pembina",
+        advisorName: advisorName.trim(),
         advisorEmail: advisorEmail.trim(),
         leaderId: me,
         memberIds: [me],
@@ -95,6 +96,8 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
     setGuidebook("");
     setOnedrive("");
     setGdrive("");
+    setAdvisorName("");
+    setAdvisorEmail("");
     setPlan(null);
     onClose();
   }
@@ -126,16 +129,16 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
             </div>
           </div>
           <div>
-            <label className="label" htmlFor="c-theme">Tema</label>
-            <input id="c-theme" className="field" value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="mis. Pemanfaatan AI untuk pendidikan" />
+            <label className="label" htmlFor="c-theme">Tema (opsional)</label>
+            <input id="c-theme" className="field" value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="Opsional, bisa diisi nanti" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label" htmlFor="c-an">Nama Pembina</label>
+              <label className="label" htmlFor="c-an">Nama Pembina (opsional)</label>
               <input id="c-an" className="field" value={advisorName} onChange={(e) => setAdvisorName(e.target.value)} />
             </div>
             <div>
-              <label className="label" htmlFor="c-ae">Email Pembina</label>
+              <label className="label" htmlFor="c-ae">Email Pembina (opsional)</label>
               <input id="c-ae" type="email" className="field" value={advisorEmail} onChange={(e) => setAdvisorEmail(e.target.value)} placeholder="nama@binus.ac.id" />
               {err("advisorEmail")}
             </div>
@@ -168,7 +171,7 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
               onChange={(e) => setGuidebook(e.target.value)}
               placeholder={"- Proposal maksimal 15 halaman\n- Wajib unggah video demo 3 menit"}
             />
-            <p className="mt-1 text-[11px] text-white/40">Poin-poin yang terdeteksi akan menjadi tugas di milestone pertama.</p>
+            <p className="mt-1 text-[11px] text-white/40">Kolom opsional bisa dilengkapi nanti lewat tombol Ubah Detail di halaman lomba. Poin-poin yang terdeteksi akan menjadi tugas di milestone pertama.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button className="btn-ghost flex-1" onClick={generate} disabled={busy}>

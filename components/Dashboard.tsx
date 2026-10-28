@@ -74,7 +74,7 @@ export default function Dashboard({
 
   if (myCompetitions.length === 0) {
     return (
-      <div className="glass mx-auto mt-6 max-w-2xl p-8 text-center">
+      <div className="card mx-auto mt-6 max-w-2xl p-8 text-center">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-active/15 text-active">
           <Radar size={26} />
         </span>
@@ -96,19 +96,19 @@ export default function Dashboard({
     <div className="space-y-5">
       {/* Summary tiles */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile icon={<Radar size={16} />} label="Kompetisi Aktif" value={active.length} tone="active" />
-        <Tile icon={<CalendarClock size={16} />} label="Tugas Saya (Terbuka)" value={myOpen.length} tone="neutral" />
-        <Tile icon={<BellRing size={16} />} label="Perlu Alarm (< 24 jam)" value={urgentCount} tone={urgentCount ? "danger" : "safe"} />
+        <Tile icon={<Radar size={16} />} label="Kompetisi Aktif" value={active.length} bg="lav" />
+        <Tile icon={<CalendarClock size={16} />} label="Tugas Saya (Terbuka)" value={myOpen.length} bg="sky" />
+        <Tile icon={<BellRing size={16} />} label="Perlu Alarm (< 24 jam)" value={urgentCount} bg={urgentCount ? "peach" : "mint"} />
         <Tile
           icon={collisions.length ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
           label="Bentrok Jadwal"
           value={collisions.length}
-          tone={collisions.length ? "danger" : "safe"}
+          bg={collisions.length ? "peach" : "cream"}
         />
       </div>
 
       {/* Collision radar */}
-      <section className="glass p-4 sm:p-5" aria-labelledby="radar-h">
+      <section className="card p-4 sm:p-5" aria-labelledby="radar-h">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 id="radar-h" className="flex items-center gap-2 text-sm font-semibold">
             <Radar size={16} className="text-active" /> Radar Bentrok Jadwal
@@ -164,7 +164,7 @@ export default function Dashboard({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`rounded-xl border p-4 ${t.bg} ${t.border}`}
-                  style={{ boxShadow: `0 0 28px -10px ${t.hex}` }}
+                 
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={tone} pulse={c.severity === "critical"}>
@@ -217,7 +217,7 @@ export default function Dashboard({
               <button
                 key={c.id}
                 onClick={() => onOpen(c.id)}
-                className="glass group p-4 text-left transition hover:border-white/20 hover:bg-white/[0.07]"
+                className="card group p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg"
               >
                 <div className="flex items-center gap-4">
                   <Gauge value={score} color={TONE[tone].hex} label="siap" />
@@ -245,7 +245,7 @@ export default function Dashboard({
       </section>
 
       {/* Cross-competition timeline */}
-      <section className="glass p-4 sm:p-5" aria-labelledby="tl-h">
+      <section className="card p-4 sm:p-5" aria-labelledby="tl-h">
         <h2 id="tl-h" className="mb-3 flex items-center gap-2 text-sm font-semibold">
           <CalendarClock size={16} className="text-active" /> Timeline Lintas Kompetisi · 14 Hari
         </h2>
@@ -309,7 +309,7 @@ export default function Dashboard({
       </section>
 
       {/* My urgent tasks */}
-      <section className="glass p-4 sm:p-5" aria-labelledby="my-h">
+      <section className="card p-4 sm:p-5" aria-labelledby="my-h">
         <h2 id="my-h" className="mb-3 text-sm font-semibold">
           Tugas Saya yang Paling Dekat
         </h2>
@@ -340,7 +340,7 @@ export default function Dashboard({
       </section>
 
       {/* Notification log */}
-      <section className="glass p-4 sm:p-5" aria-labelledby="log-h">
+      <section className="card p-4 sm:p-5" aria-labelledby="log-h">
         <h2 id="log-h" className="mb-3 flex items-center gap-2 text-sm font-semibold">
           <BellRing size={16} className="text-active" /> Log Notifikasi
         </h2>
@@ -362,15 +362,15 @@ export default function Dashboard({
   );
 }
 
-function Tile({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: "safe" | "active" | "warn" | "danger" | "neutral" }) {
-  const t = TONE[tone];
+/** Pastel stat block. Text stays in the foreground colour so it reads on every tint, light or dark. */
+function Tile({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: number; bg: "lav" | "mint" | "cream" | "peach" | "sky" }) {
   return (
-    <div className="glass p-4">
-      <div className={`flex items-center gap-1.5 text-xs ${t.text}`}>
-        {icon}
+    <div className="rounded-3xl p-4 sm:p-5" style={{ background: `var(--tile-${bg})` }}>
+      <div className="flex items-center gap-2 text-xs font-semibold text-white/70">
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-[#fff]/60 text-[#1c1c22] dark:bg-[#fff]/10 dark:text-[#fff]">{icon}</span>
         {label}
       </div>
-      <div className="mt-1 text-3xl font-bold tabular-nums">{value}</div>
+      <div className="mt-3 text-4xl font-extrabold tabular-nums">{value}</div>
     </div>
   );
 }

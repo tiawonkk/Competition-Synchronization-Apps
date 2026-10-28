@@ -3,7 +3,7 @@
 import { BellRing, KeyRound, LayoutDashboard, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Sun, Trophy, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { alarm, requestNotificationPermission } from "@/lib/alarm";
-import { isAlarming, scoreTone } from "@/lib/logic";
+import { isAlarming, scoreTone, userEmail } from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import Dashboard from "./Dashboard";
 import LoginScreen from "./LoginScreen";
@@ -12,6 +12,7 @@ import Workspace from "./Workspace";
 import AlarmModal from "./modals/AlarmModal";
 import CompleteModal from "./modals/CompleteModal";
 import CreateCompetitionModal from "./modals/CreateCompetitionModal";
+import EditCompetitionModal from "./modals/EditCompetitionModal";
 import JoinCompetitionModal from "./modals/JoinCompetitionModal";
 import ReportModal from "./modals/ReportModal";
 import { Avatar, TONE } from "./ui";
@@ -31,6 +32,7 @@ function Shell() {
   const [view, setView] = useState<View>({ kind: "dashboard" });
   const [completeId, setCompleteId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [ringingId, setRingingId] = useState<string | null>(null);
@@ -107,25 +109,25 @@ function Shell() {
   const title = current ? current.title : "Beranda";
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1500px]">
+    <div className="mx-auto flex min-h-screen max-w-[1600px] lg:gap-2 lg:p-3">
       {/* Desktop sidebar (collapsible) */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-white/[0.08] p-3 transition-[width] duration-200 lg:flex ${collapsed ? "w-[68px]" : "w-60"}`}
+        className={`sidebar-dark sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 flex-col rounded-[28px] p-3 transition-[width] duration-200 lg:flex ${collapsed ? "w-[72px]" : "w-64"}`}
       >
         <div className={`mb-5 flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-2"}`}>
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-active text-[#fff] shadow-sm">
-            <Trophy size={17} />
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#f6efd9] text-[#1c1c20]">
+            <Trophy size={18} />
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-[15px] font-bold leading-tight">CompeteSync</div>
-              <div className="text-[10px] text-white/45">Anti-keteteran untuk juara</div>
+              <div className="text-base font-bold leading-tight">CompeteSync</div>
+              <div className="text-[11px] text-white/45">Kelola lomba bersama tim</div>
             </div>
           )}
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto">
           <NavButton collapsed={collapsed} active={!current} onClick={() => setView({ kind: "dashboard" })} icon={<LayoutDashboard size={18} />} label="Beranda" />
-          {!collapsed && <div className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-white/35">Kompetisi</div>}
+          {!collapsed && <div className="px-3 pb-1 pt-4 text-xs font-semibold text-white/40">Lomba Saya</div>}
           {collapsed && <div className="mx-3 my-3 h-px bg-white/10" />}
           {active.map((c) => {
             const s = readiness(c.id);
@@ -156,18 +158,18 @@ function Shell() {
                 collapsed ? (
                   <Avatar user={user} size={32} />
                 ) : (
-                  <div className="glass flex min-w-0 items-center gap-2 p-2 transition hover:bg-white/[0.07]">
+                  <div className="flex min-w-0 items-center gap-2 rounded-2xl bg-white/[0.07] p-2 transition hover:bg-white/[0.12]">
                     <Avatar user={user} size={30} />
                     <div className="min-w-0">
                       <div className="truncate text-xs font-medium">{user.fullName}</div>
-                      <div className="truncate text-[10px] text-white/45">{user.emailMicrosoft ?? user.emailGoogle}</div>
+                      <div className="truncate text-[10px] text-white/45">{userEmail(user)}</div>
                     </div>
                   </div>
                 )
               }
             </ProfileMenu>
           </div>
-          <button className="rounded-lg p-2 text-white/50 hover:bg-danger/10 hover:text-danger" onClick={() => dispatch({ type: "logout" })} aria-label="Keluar" title="Keluar">
+          <button className="rounded-xl p-2 text-white/50 hover:bg-danger/15 hover:text-danger" onClick={() => dispatch({ type: "logout" })} aria-label="Keluar" title="Keluar">
             <LogOut size={18} />
           </button>
           <button className="rounded-lg p-2 text-white/50 hover:bg-white/10" onClick={toggleSidebar} aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}>
@@ -176,16 +178,16 @@ function Shell() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-8 lg:pb-10">
+      <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-8 lg:px-6 lg:pb-8 lg:pt-4">
         <header className="mb-6 flex flex-wrap items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-active text-[#fff] lg:hidden">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#1c1c20] text-[#f6efd9] lg:hidden">
             <Trophy size={16} />
           </span>
-          <h1 className="min-w-0 flex-1 truncate text-xl font-bold tracking-tight sm:text-2xl">{title}</h1>
-          <button className="btn-primary hidden sm:inline-flex lg:hidden xl:inline-flex" onClick={() => setCreateOpen(true)}>
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>
+          <button className="btn-primary hidden xl:inline-flex" onClick={() => setCreateOpen(true)}>
             <Plus size={16} /> Buat Lomba Baru
           </button>
-          <button className="btn-ghost hidden sm:inline-flex lg:hidden xl:inline-flex" onClick={() => setJoinOpen(true)}>
+          <button className="btn-ghost hidden xl:inline-flex" onClick={() => setJoinOpen(true)}>
             <KeyRound size={16} /> Gabung Lomba
           </button>
           <button className={armed ? "btn-safe" : "btn-ghost"} onClick={arm} aria-pressed={armed} title="Aktifkan suara alarm (butuh klik pertama dari browser)">
@@ -213,12 +215,12 @@ function Shell() {
         {!current ? (
           <Dashboard onOpen={open} onComplete={setCompleteId} onCreate={() => setCreateOpen(true)} onJoin={() => setJoinOpen(true)} />
         ) : (
-          <Workspace key={current.id} competitionId={current.id} onComplete={setCompleteId} onTestAlarm={testAlarm} onReport={() => setReportId(current.id)} />
+          <Workspace key={current.id} competitionId={current.id} onComplete={setCompleteId} onTestAlarm={testAlarm} onReport={() => setReportId(current.id)} onEdit={() => setEditId(current.id)} />
         )}
       </main>
 
       {/* Mobile bottom bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[rgb(var(--surface))]/85 backdrop-blur-xl lg:hidden" aria-label="Navigasi utama">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[rgb(var(--surface))] lg:hidden" aria-label="Navigasi utama">
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
           <MobileTab active={!current} onClick={() => setView({ kind: "dashboard" })} label="Beranda" icon={<LayoutDashboard size={20} />} />
           {active.slice(0, 2).map((c) => (
@@ -238,6 +240,7 @@ function Shell() {
       <AlarmModal taskId={ringingId} onConfirm={setCompleteId} />
       <CompleteModal taskId={completeId} onClose={() => setCompleteId(null)} />
       <ReportModal competitionId={reportId} onClose={() => setReportId(null)} />
+      <EditCompetitionModal competitionId={editId} onClose={() => setEditId(null)} />
       <CreateCompetitionModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={open} />
       <JoinCompetitionModal open={joinOpen} onClose={() => setJoinOpen(false)} onJoined={open} />
     </div>
@@ -251,7 +254,7 @@ function NavButton({ active, onClick, icon, label, trailing, collapsed }: { acti
       title={label}
       aria-current={active ? "page" : undefined}
       className={`flex w-full items-center gap-2.5 rounded-xl py-2.5 text-left text-sm transition ${collapsed ? "justify-center px-0" : "px-3"} ${
-        active ? "bg-active/10 font-medium text-active" : "text-white/65 hover:bg-white/[0.06]"
+        active ? "bg-white/[0.12] font-semibold text-white" : "text-white/60 hover:bg-white/[0.06] hover:text-white"
       }`}
     >
       <span className="grid w-5 place-items-center">{icon}</span>

@@ -47,7 +47,7 @@ export function Avatar({ user, size = 28 }: { user: Pick<User, "fullName" | "col
   );
 }
 
-/** Circular readiness gauge with neon glow. */
+/** Circular readiness gauge. */
 export function Gauge({ value, size = 96, color, label }: { value: number; size?: number; color: string; label?: string }) {
   const r = (size - 12) / 2;
   const c = 2 * Math.PI * r;
@@ -60,14 +60,14 @@ export function Gauge({ value, size = 96, color, label }: { value: number; size?
           cy={size / 2}
           r={r}
           stroke={color}
-          strokeWidth={8}
+          strokeWidth={9}
           strokeLinecap="round"
           fill="none"
           strokeDasharray={c}
           initial={false}
           animate={{ strokeDashoffset: c * (1 - value / 100) }}
           transition={{ duration: 0.9, ease: "easeOut" }}
-          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+         
         />
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
@@ -100,7 +100,7 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 grid place-items-end bg-slate-900/50 p-0 backdrop-blur-sm sm:place-items-center sm:p-4"
+          className="fixed inset-0 z-50 grid place-items-end bg-slate-900/45 p-0 sm:place-items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -110,7 +110,7 @@ export function Modal({
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className={`glass flex max-h-[92vh] w-full flex-col overflow-hidden rounded-b-none bg-[var(--modal-bg)] sm:rounded-2xl ${
+            className={`card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-b-none bg-[var(--modal-bg)] shadow-2xl sm:rounded-3xl ${
               wide ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
             initial={{ y: 40, opacity: 0, scale: 0.98 }}

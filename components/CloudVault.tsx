@@ -29,7 +29,7 @@ export default function CloudVault({ competitionId }: { competitionId: string })
   const count = (p: Provider) => all.filter((r) => r.provider === p).length;
 
   return (
-    <section className="glass p-4 sm:p-5" aria-labelledby="vault-h">
+    <section className="card p-4 sm:p-5" aria-labelledby="vault-h">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 id="vault-h" className="text-sm font-semibold">
           Cloud Vault

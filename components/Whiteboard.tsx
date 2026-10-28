@@ -147,7 +147,7 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
 
   return (
     <div className="space-y-4">
-      <div className="glass relative overflow-hidden">
+      <div className="card relative overflow-hidden">
         <div
           ref={canvasRef}
           className={`dot-grid relative h-[68vh] min-h-[460px] select-none overflow-hidden ${
@@ -250,7 +250,7 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
           </div>
 
           {/* Toolbar */}
-          <div data-ui className="glass absolute left-3 top-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 p-1.5">
+          <div data-ui className="card absolute left-3 top-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 p-1.5">
             <ToolBtn active={tool === "select"} onClick={() => setTool("select")} label="Geser & pilih" icon={<Hand size={16} />} />
             <ToolBtn active={tool === "pen"} onClick={() => setTool("pen")} label="Pena" icon={<Pencil size={16} />} />
             <ToolBtn active={tool === "eraser"} onClick={() => setTool("eraser")} label="Hapus coretan" icon={<Eraser size={16} />} />
@@ -280,7 +280,7 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
           </div>
 
           {/* Zoom + presence */}
-          <div data-ui className="glass absolute bottom-3 left-3 z-20 flex items-center gap-1 p-1">
+          <div data-ui className="card absolute bottom-3 left-3 z-20 flex items-center gap-1 p-1">
             <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => zoomBy(0.85)} aria-label="Perkecil">
               <Minus size={15} />
             </button>
@@ -291,7 +291,7 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
               <Plus size={15} />
             </button>
           </div>
-          <div data-ui className="glass absolute bottom-3 right-3 z-20 flex items-center gap-2 px-2.5 py-1.5">
+          <div data-ui className="card absolute bottom-3 right-3 z-20 flex items-center gap-2 px-2.5 py-1.5">
             <div className="flex -space-x-2">
               {team.map((m) => (
                 <span key={m.userId} className="relative">
@@ -326,7 +326,7 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
           )}
 
           {toast && (
-            <div data-ui className="glass absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-3 border-safe/40 px-4 py-2.5 text-xs shadow-lg">
+            <div data-ui className="card absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-3 border-safe/40 px-4 py-2.5 text-xs shadow-lg">
               <Check size={15} className="text-safe" /> {toast}
               <button className="font-semibold text-active hover:underline" onClick={onGoTasks}>
                 Lihat daftar tugas
@@ -336,7 +336,7 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
         </div>
       </div>
 
-      <section className="glass p-4 sm:p-5" aria-labelledby="top-ideas">
+      <section className="card p-4 sm:p-5" aria-labelledby="top-ideas">
         <h2 id="top-ideas" className="mb-3 flex items-center gap-2 text-sm font-semibold">
           <Lightbulb size={16} className="text-warn" /> Ide Terpopuler
           <span className="text-xs font-normal text-white/40">masuk otomatis ke Laporan Pembina</span>
@@ -420,7 +420,7 @@ function ConvertPanel({ note, onClose, onDone }: { note: WhiteboardElement; onCl
   }
 
   return (
-    <div data-ui className="glass absolute right-3 top-3 z-30 w-[min(20rem,calc(100%-1.5rem))] bg-[var(--modal-bg)] p-4 shadow-xl" role="dialog" aria-label="Jadikan tugas">
+    <div data-ui className="card absolute right-3 top-3 z-30 w-[min(20rem,calc(100%-1.5rem))] bg-[var(--modal-bg)] p-4 shadow-xl" role="dialog" aria-label="Jadikan tugas">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold">
           <Zap size={15} className="text-active" /> Jadikan Tugas

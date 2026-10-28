@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BellRing, Calendar, CheckCircle2, ExternalLink, KeyRound, Mail, Send, Volume2, Zap } from "lucide-react";
+import { BellRing, Calendar, CheckCircle2, ExternalLink, KeyRound, Mail, Pencil, Send, Volume2, Zap } from "lucide-react";
 import { useState } from "react";
 import { DAY, dueState, fmtDate, fmtDateTime, PRIORITY_LABEL, relative, scoreTone } from "@/lib/logic";
 import { useStore } from "@/lib/store";
@@ -15,11 +15,13 @@ export default function Workspace({
   onComplete,
   onTestAlarm,
   onReport,
+  onEdit,
 }: {
   competitionId: string;
   onComplete: (taskId: string) => void;
   onTestAlarm: (taskId: string) => void;
   onReport: () => void;
+  onEdit: () => void;
 }) {
   const { data, now, me, readiness } = useStore();
   const [assignee, setAssignee] = useState<string>("all");
@@ -54,8 +56,7 @@ export default function Workspace({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <section className="glass relative overflow-hidden p-4 sm:p-5">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-25 blur-3xl" style={{ background: comp.accent }} />
+      <section className="card relative overflow-hidden p-4 sm:p-5">
         <div className="relative flex flex-wrap items-center gap-5">
           <Gauge value={score} size={112} color={TONE[scoreTone(score)].hex} label="Kesiapan" />
           <div className="min-w-0 flex-1">
@@ -65,7 +66,7 @@ export default function Workspace({
               {myRole && <Badge tone="neutral">Peran Anda: {myRole === "leader" ? "Ketua" : "Anggota"}{myMember?.teamRole ? ` · ${myMember.teamRole}` : ""}</Badge>}
             </div>
             <h1 className="mt-1.5 text-xl font-bold sm:text-2xl">{comp.title}</h1>
-            <p className="text-sm text-white/60">{comp.theme}</p>
+            <p className="text-sm text-white/60">{comp.theme || "Tema belum diisi"}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/60">
               <KeyRound size={13} /> Kode undangan:
               <button
@@ -81,9 +82,16 @@ export default function Workspace({
               Deadline final: {fmtDateTime(comp.submissionDeadline)} · {done}/{tasks.length} tugas selesai · {proofs} bukti terunggah
             </p>
           </div>
-          <button className="btn-primary" onClick={onReport}>
-            <Mail size={16} /> Laporan Pembina
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {myRole === "leader" && (
+              <button className="btn-ghost" onClick={onEdit}>
+                <Pencil size={15} /> Ubah Detail
+              </button>
+            )}
+            <button className="btn-primary" onClick={onReport}>
+              <Mail size={16} /> Laporan Pembina
+            </button>
+          </div>
         </div>
       </section>
 
@@ -113,7 +121,7 @@ export default function Workspace({
       <div>
         <div className="space-y-5">
           {/* Team */}
-          <section className="glass p-4 sm:p-5" aria-labelledby="team-h">
+          <section className="card p-4 sm:p-5" aria-labelledby="team-h">
             <h2 id="team-h" className="mb-3 text-sm font-semibold">
               Anggota Tim ({team.length}) &amp; Sinkronisasi Akun
             </h2>
@@ -152,14 +160,14 @@ export default function Workspace({
                   </button>
                 );
               })}
-              <div className="flex items-center gap-2 rounded-full border border-dashed border-white/15 px-3 py-1 text-xs text-white/50" title={comp.advisorEmail}>
-                <Mail size={13} /> Pembina: {comp.advisorName}
+              <div className="flex items-center gap-2 rounded-full border border-dashed border-white/15 px-3 py-1 text-xs text-white/50" title={comp.advisorEmail || undefined}>
+                <Mail size={13} /> Pembina: {comp.advisorName || comp.advisorEmail || "belum diisi"}
               </div>
             </div>
           </section>
 
           {/* Milestones & tasks */}
-          <section className="glass p-4 sm:p-5" aria-labelledby="task-h">
+          <section className="card p-4 sm:p-5" aria-labelledby="task-h">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 id="task-h" className="text-sm font-semibold">
                 Milestone &amp; Daftar Tugas

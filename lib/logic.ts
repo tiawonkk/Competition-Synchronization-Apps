@@ -272,3 +272,6 @@ export function nextAutoSend(now: number): Date {
 
 const wibFmt = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" });
 export const fmtWib = (d: Date) => `${wibFmt.format(d).replace(".", ":")} WIB`;
+
+/** The address a user signs in with (falls back to the calendar emails for server-loaded users). */
+export const userEmail = (u: { email?: string; emailMicrosoft?: string; emailGoogle?: string }) => u.email ?? u.emailMicrosoft ?? u.emailGoogle ?? "";

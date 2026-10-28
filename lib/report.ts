@@ -60,7 +60,7 @@ export function generateAdvisorReport(data: AppData, competitionId: string, now:
 <div style="font-family:Segoe UI,Arial,sans-serif;max-width:680px;margin:0 auto;color:#0f172a;line-height:1.55;background:#ffffff;padding:24px;">
   <p style="margin:0 0 4px;font-size:12px;color:#64748b;">${esc(fmtLong(now))}</p>
   <h1 style="font-size:20px;margin:0 0 14px;color:#0b1b34;">Laporan Progres Mingguan &mdash; ${esc(comp.title)}</h1>
-  <p style="margin:0 0 10px;font-size:14px;">Yth. Bapak/Ibu <strong>${esc(comp.advisorName)}</strong>,</p>
+  <p style="margin:0 0 10px;font-size:14px;">Yth. Bapak/Ibu <strong>${esc(comp.advisorName || "Pembina")}</strong>,</p>
   <p style="margin:0 0 10px;font-size:14px;">Dengan hormat, berikut kami sampaikan laporan perkembangan persiapan tim pada <strong>Minggu ke-${weekNumber}</strong> untuk kompetisi <strong>${esc(comp.title)}</strong> (${esc(comp.category)}) dengan tema &ldquo;${esc(comp.theme)}&rdquo;. Batas akhir pengumpulan adalah <strong>${esc(fmtDateTime(comp.submissionDeadline))}</strong> (${daysLeft} hari lagi).</p>
 
   <h2 style="${h2}">1. Ringkasan Kesiapan</h2>

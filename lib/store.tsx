@@ -5,7 +5,7 @@ import { computeReadiness, fmtDateTime, uid, type RescheduleMove } from "./logic
 import { emptyData, type AppData } from "./seed";
 import type { AdvisorReport, Competition, Member, Milestone, Notice, Resource, Task, User, WhiteboardElement } from "./types";
 
-const STORAGE_KEY = "cs-state-v3";
+const STORAGE_KEY = "cs-state-v4";
 
 type Action =
   | { type: "login"; userId: string }
@@ -16,6 +16,7 @@ type Action =
   | { type: "join"; competitionId: string; userId: string; teamRole: string }
   | { type: "reschedule"; moves: RescheduleMove[] }
   | { type: "assign"; taskId: string; userId: string }
+  | { type: "updateCompetition"; id: string; patch: Partial<Competition> }
   | { type: "addResource"; resource: Resource }
   | { type: "setAutoSend"; competitionId: string; on: boolean }
   | { type: "saveReport"; report: AdvisorReport }
@@ -156,6 +157,8 @@ function reducer(state: AppData, action: Action): AppData {
         `Catatan whiteboard jadi tugas "${action.task.title}" (${fmtDateTime(action.task.dueDate)}) untuk ${user?.fullName ?? "tim"}.`,
       );
     }
+    case "updateCompetition":
+      return { ...state, competitions: state.competitions.map((c) => (c.id === action.id ? { ...c, ...action.patch } : c)) };
     case "reset":
       return action.data;
   }

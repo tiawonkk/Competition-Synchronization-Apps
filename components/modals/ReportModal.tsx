@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fmtDateTime, fmtWib, nextAutoSend, uid } from "@/lib/logic";
 import { generateAdvisorReport } from "@/lib/report";
 import { useStore } from "@/lib/store";
+import { isEmail } from "@/lib/passwords";
 import { Badge, Modal } from "../ui";
 
 export default function ReportModal({ competitionId, onClose }: { competitionId: string | null; onClose: () => void }) {
@@ -12,10 +13,16 @@ export default function ReportModal({ competitionId, onClose }: { competitionId:
   const [nonce, setNonce] = useState(0);
   const [phase, setPhase] = useState<"idle" | "sending" | "sent">("idle");
   const [viewing, setViewing] = useState<string | null>(null); // id of a past report shown in the preview
+  const [emailDraft, setEmailDraft] = useState("");
+  const [nameDraft, setNameDraft] = useState("");
+  const [emailError, setEmailError] = useState(false);
 
   useEffect(() => {
     setPhase("idle");
     setViewing(null);
+    setEmailDraft("");
+    setNameDraft("");
+    setEmailError(false);
   }, [competitionId]);
 
   // `nonce` forces regeneration after tasks change while the modal is open
@@ -30,8 +37,14 @@ export default function ReportModal({ competitionId, onClose }: { competitionId:
   const isLeader = data.members.some((m) => m.competitionId === competitionId && m.userId === me && m.role === "leader");
   const next = useMemo(() => nextAutoSend(now), [now]);
 
+  function saveAdvisor() {
+    if (!comp) return;
+    if (!isEmail(emailDraft.trim())) return setEmailError(true);
+    dispatch({ type: "updateCompetition", id: comp.id, patch: { advisorEmail: emailDraft.trim(), advisorName: nameDraft.trim() || comp.advisorName } });
+  }
+
   function send() {
-    if (!report || !comp || !isLeader) return;
+    if (!report || !comp || !isLeader || !comp.advisorEmail) return;
     setPhase("sending");
     // Simulated send: in production this POSTs to /api/advisor-report with { send: true }, which calls Resend.
     setTimeout(() => {
@@ -58,11 +71,37 @@ export default function ReportModal({ competitionId, onClose }: { competitionId:
           <div className="grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs sm:grid-cols-[auto_1fr] sm:gap-x-4">
             <span className="text-white/40">Kepada</span>
             <span>
-              {comp.advisorName} &lt;{comp.advisorEmail}&gt;
+              {comp.advisorEmail ? `${comp.advisorName || "Pembina"} <${comp.advisorEmail}>` : "Belum diisi"}
             </span>
             <span className="text-white/40">Subjek</span>
             <span>{past ? `[Arsip] Laporan minggu ${past.weekNumber}` : report.subject}</span>
           </div>
+
+          {!comp.advisorEmail && (
+            <div className="mt-3 rounded-xl bg-warn/10 p-3 text-sm">
+              <div className="font-medium text-warn">Email Pembina belum diisi</div>
+              {isLeader ? (
+                <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <input className="field" placeholder="Nama Pembina" value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} aria-label="Nama Pembina" />
+                  <input
+                    className="field"
+                    type="email"
+                    placeholder="nama@binus.ac.id"
+                    value={emailDraft}
+                    onChange={(e) => {
+                      setEmailDraft(e.target.value);
+                      setEmailError(false);
+                    }}
+                    aria-label="Email Pembina"
+                  />
+                  <button className="btn-primary" onClick={saveAdvisor}>Simpan</button>
+                  {emailError && <p className="text-xs text-danger sm:col-span-3">Format email belum valid.</p>}
+                </div>
+              ) : (
+                <p className="mt-1 text-xs text-white/60">Minta Ketua tim untuk mengisinya.</p>
+              )}
+            </div>
+          )}
 
           <div className="mt-3 max-h-[40vh] overflow-y-auto rounded-xl bg-[#ffffff]" aria-label="Pratinjau email">
             <div dangerouslySetInnerHTML={{ __html: past ? past.html : report.html }} />
@@ -126,7 +165,7 @@ export default function ReportModal({ competitionId, onClose }: { competitionId:
                 <CheckCircle2 size={18} /> Terkirim (simulasi) ke {comp.advisorEmail}
               </span>
             ) : (
-              <button className="btn-primary" onClick={send} disabled={phase === "sending" || !isLeader} title={isLeader ? undefined : "Hanya Ketua yang dapat mengirim laporan"}>
+              <button className="btn-primary" onClick={send} disabled={phase === "sending" || !isLeader || !comp.advisorEmail} title={!isLeader ? "Hanya Ketua yang dapat mengirim laporan" : !comp.advisorEmail ? "Isi email Pembina lebih dulu" : undefined}>
                 {phase === "sending" ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 Kirim Laporan ke Email Pembina Sekarang
               </button>

@@ -17,7 +17,7 @@ const config: Config = {
         warn: v("warn"),
         danger: v("danger"),
       },
-      fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
+      fontFamily: { sans: ["var(--font-sans)", "system-ui", "sans-serif"] },
       keyframes: {
         ring: {
           "0%,100%": { transform: "rotate(0)" },

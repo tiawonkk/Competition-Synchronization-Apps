@@ -7,10 +7,12 @@ export type ResourceKind = "guidebook" | "diagram" | "deck" | "zip" | "other";
 export interface User {
   id: string;
   fullName: string;
-  emailGoogle?: string;
-  emailMicrosoft?: string;
+  email?: string; // sign-in email
+  emailGoogle?: string; // set when the account can use Google Calendar
+  emailMicrosoft?: string; // set when the account can use Outlook
   color: string; // avatar accent
-  headline?: string; // short persona label shown on the login screen
+  salt?: string; // password hash inputs (local accounts only)
+  passwordHash?: string;
 }
 
 export interface Competition {

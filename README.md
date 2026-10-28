@@ -8,8 +8,8 @@ Aplikasi PWA untuk mahasiswa yang mengikuti beberapa kompetisi sekaligus (Hackat
 
 | Fitur | Keterangan |
 |---|---|
-| **Login & Ganti Akun** | Masuk dengan Microsoft 365 (@binus.ac.id) atau Google (@gmail.com), daftar akun baru, atau Menu profil memungkinkan ganti akun tanpa kehilangan data, dan tombol Keluar mengembalikan ke layar masuk. Di mode demo, tombol penyedia hanya mencocokkan domain email; tidak ada OAuth sungguhan. |
-| **Buat Lomba & Gabung via Kode** | Ketua membuat lomba (kategori, tema, deadline, email Pembina, folder OneDrive/Drive) dan mendapat kode undangan otomatis, misalnya `HACK-88`. Anggota lain memasukkan kode dan memilih peran tim; batas 5 anggota ditegakkan. Tombol AI membuat milestone dan tugas, termasuk poin dari guidebook yang ditempel. |
+| **Akun & Login** | Daftar dengan nama, email, dan kata sandi (minimal 8 karakter), lalu masuk kembali kapan saja dengan email yang sama. Kata sandi disimpan sebagai hash PBKDF2 di browser, bukan teks asli. Di mode demo, akun hanya ada di browser itu; login lintas perangkat menunggu Supabase Auth. |
+| **Buat Lomba & Gabung via Kode** | Ketua membuat lomba (kategori, tema, deadline, email Pembina, folder OneDrive/Drive) dan mendapat kode undangan otomatis, misalnya `HACK-88`. Anggota lain memasukkan kode dan memilih peran tim; batas 5 anggota ditegakkan. Tombol AI membuat milestone dan tugas, termasuk poin dari guidebook yang ditempel. Email/nama Pembina, tema, dan folder Drive opsional dan bisa dilengkapi nanti lewat **Ubah Detail**. |
 | **AI Rescheduler** | Satu klik memindahkan tugas internal yang bentrok (deadline final tidak digeser) ke hari kosong terdekat, lalu menulis log pembaruan kalender. |
 | **Radar Bentrok Jadwal** | Mendeteksi tenggat berat (prioritas Tinggi/Kritis dan deadline final) dari kompetisi berbeda dalam jendela 48 jam, lengkap dengan saran memajukan jadwal internal. |
 | **Skor Kesiapan** | 0–100% per kompetisi: 70% rasio tugas selesai + 30% rasio deliverable bertautan bukti, dibobot menurut prioritas. |
