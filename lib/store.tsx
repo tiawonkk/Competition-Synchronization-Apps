@@ -1,13 +1,23 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
-import { computeReadiness } from "./logic";
-import { buildSeed, CURRENT_USER_ID, type AppData } from "./seed";
-import type { AdvisorReport, Competition, Member, Milestone, Task, WhiteboardElement } from "./types";
+import { computeReadiness, fmtDateTime, uid, type RescheduleMove } from "./logic";
+import { buildSeed, type AppData } from "./seed";
+import type { AdvisorReport, Competition, Member, Milestone, Notice, Resource, Task, User, WhiteboardElement } from "./types";
+
+const STORAGE_KEY = "cs-state-v2";
 
 type Action =
+  | { type: "login"; userId: string }
+  | { type: "register"; user: User }
+  | { type: "logout" }
   | { type: "complete"; taskId: string; proofUrl: string; at: string }
   | { type: "addPlan"; competition: Competition; members: Member[]; milestones: Milestone[]; tasks: Task[] }
+  | { type: "join"; competitionId: string; userId: string; teamRole: string }
+  | { type: "reschedule"; moves: RescheduleMove[] }
+  | { type: "assign"; taskId: string; userId: string }
+  | { type: "addResource"; resource: Resource }
+  | { type: "setAutoSend"; competitionId: string; on: boolean }
   | { type: "saveReport"; report: AdvisorReport }
   | { type: "wbAdd"; element: WhiteboardElement }
   | { type: "wbPatch"; id: string; patch: Partial<WhiteboardElement> }
@@ -16,28 +26,108 @@ type Action =
   | { type: "noteToTask"; noteId: string; task: Task }
   | { type: "reset"; data: AppData };
 
+function withNotice(state: AppData, text: string, tone: Notice["tone"] = "active"): AppData {
+  const notice: Notice = { id: uid("n"), at: new Date().toISOString(), text, tone };
+  return { ...state, notices: [notice, ...state.notices].slice(0, 40) };
+}
+
+const calendars = (u?: User) => [u?.emailGoogle && "Google Calendar", u?.emailMicrosoft && "Outlook"].filter(Boolean).join(" & ") || "kalender";
+
 function reducer(state: AppData, action: Action): AppData {
   switch (action.type) {
-    case "complete":
+    case "login":
+      return { ...state, session: action.userId };
+    case "register":
+      return { ...state, users: [...state.users, action.user], session: action.user.id };
+    case "logout":
+      return { ...state, session: null };
+
+    case "complete": {
       // Stop-on-Confirm: completing with proof deactivates the alarm and the linked calendar reminders.
-      return {
+      const task = state.tasks.find((t) => t.id === action.taskId);
+      const next = {
+        ...state,
+        tasks: state.tasks.map((t) =>
+          t.id === action.taskId ? { ...t, isCompleted: true, completedAt: action.at, proofUrl: action.proofUrl, alarmActive: false } : t,
+        ),
+      };
+      return task
+        ? withNotice(next, `"${task.title}" selesai. Alarm dihentikan dan pengingat ${calendars(state.users.find((u) => u.id === task.assignedTo))} dibatalkan.`, "safe")
+        : next;
+    }
+
+    case "addPlan":
+      return withNotice(
+        {
+          ...state,
+          competitions: [...state.competitions, action.competition],
+          members: [...state.members, ...action.members],
+          milestones: [...state.milestones, ...action.milestones],
+          tasks: [...state.tasks, ...action.tasks],
+        },
+        `Lomba "${action.competition.title}" dibuat. Kode undangan: ${action.competition.inviteCode}. ${action.tasks.length} tugas dan ${action.milestones.length} milestone dijadwalkan.`,
+        "safe",
+      );
+
+    case "join": {
+      if (state.members.some((m) => m.competitionId === action.competitionId && m.userId === action.userId)) return state;
+      const comp = state.competitions.find((c) => c.id === action.competitionId);
+      const user = state.users.find((u) => u.id === action.userId);
+      const next: AppData = {
+        ...state,
+        members: [...state.members, { competitionId: action.competitionId, userId: action.userId, role: "member", teamRole: action.teamRole }],
+      };
+      return withNotice(
+        next,
+        `${user?.fullName ?? "Anggota baru"} bergabung ke "${comp?.title}" sebagai ${action.teamRole}. Tenggat lomba disinkronkan ke ${calendars(user)}.`,
+        "safe",
+      );
+    }
+
+    case "reschedule": {
+      const byId = new Map(action.moves.map((m) => [m.taskId, m]));
+      const next: AppData = {
+        ...state,
+        tasks: state.tasks.map((t) => {
+          const m = byId.get(t.id);
+          return m ? { ...t, dueDate: m.to, rescheduledFrom: t.rescheduledFrom ?? m.from } : t;
+        }),
+      };
+      return withNotice(next, `AI Rescheduler memindahkan ${action.moves.length} tugas. Event Google Calendar dan Outlook diperbarui.`, "safe");
+    }
+
+    case "assign": {
+      const user = state.users.find((u) => u.id === action.userId);
+      const next: AppData = {
         ...state,
         tasks: state.tasks.map((t) =>
           t.id === action.taskId
-            ? { ...t, isCompleted: true, completedAt: action.at, proofUrl: action.proofUrl, alarmActive: false }
+            ? {
+                ...t,
+                assignedTo: action.userId,
+                gcalEventId: user?.emailGoogle ? `gcal_${t.id}` : undefined,
+                outlookEventId: user?.emailMicrosoft ? `outlook_${t.id}` : undefined,
+              }
             : t,
         ),
       };
-    case "addPlan":
-      return {
-        ...state,
-        competitions: [...state.competitions, action.competition],
-        members: [...state.members, ...action.members],
-        milestones: [...state.milestones, ...action.milestones],
-        tasks: [...state.tasks, ...action.tasks],
-      };
+      const task = state.tasks.find((t) => t.id === action.taskId);
+      return withNotice(next, `"${task?.title}" ditugaskan ke ${user?.fullName}. Event dipindahkan ke ${calendars(user)} miliknya.`);
+    }
+
+    case "addResource":
+      return withNotice({ ...state, resources: [action.resource, ...state.resources] }, `Berkas "${action.resource.title}" ditambahkan ke Cloud Vault.`);
+
+    case "setAutoSend":
+      return withNotice(
+        { ...state, competitions: state.competitions.map((c) => (c.id === action.competitionId ? { ...c, autoSendWeekly: action.on } : c)) },
+        action.on ? "Pengiriman laporan otomatis setiap Minggu 19:00 WIB diaktifkan." : "Pengiriman laporan otomatis dimatikan.",
+        action.on ? "safe" : "warn",
+      );
+
     case "saveReport":
-      return { ...state, reports: [action.report, ...state.reports] };
+      return withNotice({ ...state, reports: [action.report, ...state.reports] }, `Laporan minggu ${action.report.weekNumber} terkirim ke ${action.report.sentToEmail}.`, "safe");
+
     case "wbAdd":
       return { ...state, whiteboard: [...state.whiteboard, action.element] };
     case "wbPatch":
@@ -54,13 +144,18 @@ function reducer(state: AppData, action: Action): AppData {
           e.id === action.id ? { ...e, votes: e.votes.includes(action.userId) ? e.votes.filter((v) => v !== action.userId) : [...e.votes, action.userId] } : e,
         ),
       };
-    case "noteToTask":
+    case "noteToTask": {
       // The new task joins the to-do list immediately; readiness is derived from tasks so it recalculates automatically.
-      return {
-        ...state,
-        tasks: [...state.tasks, action.task],
-        whiteboard: state.whiteboard.map((e) => (e.id === action.noteId ? { ...e, taskId: action.task.id } : e)),
-      };
+      const user = state.users.find((u) => u.id === action.task.assignedTo);
+      return withNotice(
+        {
+          ...state,
+          tasks: [...state.tasks, action.task],
+          whiteboard: state.whiteboard.map((e) => (e.id === action.noteId ? { ...e, taskId: action.task.id } : e)),
+        },
+        `Catatan whiteboard jadi tugas "${action.task.title}" (${fmtDateTime(action.task.dueDate)}) untuk ${user?.fullName ?? "tim"}.`,
+      );
+    }
     case "reset":
       return action.data;
   }
@@ -69,23 +164,37 @@ function reducer(state: AppData, action: Action): AppData {
 interface Store {
   data: AppData;
   now: number;
+  /** Signed-in user id ("" on the login screen). */
   me: string;
+  /** Competitions the signed-in user belongs to. */
+  myCompetitions: Competition[];
   dispatch: (a: Action) => void;
   readiness: (competitionId: string) => number;
 }
 
 const Ctx = createContext<Store | null>(null);
 
+function loadSaved(): AppData | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Partial<AppData>;
+    const ok = Array.isArray(d.users) && Array.isArray(d.competitions) && Array.isArray(d.members) && Array.isArray(d.tasks) && Array.isArray(d.notices) && "session" in d;
+    return ok ? (d as AppData) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [boot, setBoot] = useState<{ data: AppData; now: number } | null>(null);
+  const [boot, setBoot] = useState<AppData | null>(null);
   useEffect(() => {
-    const now = Date.now();
-    setBoot({ data: buildSeed(now), now });
+    setBoot(loadSaved() ?? buildSeed(Date.now()));
   }, []);
   if (!boot) {
     return <div className="grid min-h-screen place-items-center text-sm text-white/50">Memuat CompeteSync…</div>;
   }
-  return <Inner initial={boot.data}>{children}</Inner>;
+  return <Inner initial={boot}>{children}</Inner>;
 }
 
 function Inner({ initial, children }: { initial: AppData; children: ReactNode }) {
@@ -96,16 +205,27 @@ function Inner({ initial, children }: { initial: AppData; children: ReactNode })
     return () => clearInterval(id);
   }, []);
 
-  const value = useMemo<Store>(
-    () => ({
+  // Persist every change so sessions, joins, tasks and drawings survive a refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      /* storage unavailable or full: the app keeps working in memory */
+    }
+  }, [data]);
+
+  const value = useMemo<Store>(() => {
+    const me = data.session ?? "";
+    const mine = new Set(data.members.filter((m) => m.userId === me).map((m) => m.competitionId));
+    return {
       data,
       now,
-      me: CURRENT_USER_ID,
+      me,
+      myCompetitions: data.competitions.filter((c) => mine.has(c.id)),
       dispatch,
       readiness: (id) => computeReadiness(data.tasks.filter((t) => t.competitionId === id)),
-    }),
-    [data, now],
-  );
+    };
+  }, [data, now]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
@@ -114,3 +234,5 @@ export function useStore(): Store {
   if (!v) throw new Error("useStore must be used inside StoreProvider");
   return v;
 }
+
+export { buildSeed };

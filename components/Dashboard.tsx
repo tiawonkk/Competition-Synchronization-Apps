@@ -1,9 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, BellRing, CalendarClock, CheckCircle2, Flag, Radar, ShieldCheck, Zap } from "lucide-react";
-import { useMemo } from "react";
-import { DAY, detectCollisions, dueState, fmtDate, fmtDateTime, isAlarming, PRIORITY_LABEL, relative, scoreTone, workloadPerDay } from "@/lib/logic";
+import { AlertTriangle, ArrowRight, BellRing, CalendarClock, CheckCircle2, Flag, KeyRound, Loader2, Plus, Radar, ShieldCheck, Zap } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  DAY,
+  detectCollisions,
+  dueState,
+  fmtDate,
+  fmtDateTime,
+  fmtTime,
+  isAlarming,
+  planReschedule,
+  PRIORITY_LABEL,
+  relative,
+  scoreTone,
+  workloadPerDay,
+  type RescheduleMove,
+} from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import { Avatar, Badge, Gauge, PRIORITY_TONE, TONE } from "./ui";
 
@@ -12,13 +26,35 @@ const DAYS = 14;
 export default function Dashboard({
   onOpen,
   onComplete,
+  onCreate,
+  onJoin,
 }: {
   onOpen: (competitionId: string) => void;
   onComplete: (taskId: string) => void;
+  onCreate: () => void;
+  onJoin: () => void;
 }) {
-  const { data, now, me, readiness } = useStore();
-  const active = data.competitions.filter((c) => c.status === "active");
-  const collisions = useMemo(() => detectCollisions(data.competitions, data.tasks, now), [data.competitions, data.tasks, now]);
+  const { data, now, me, myCompetitions, dispatch, readiness } = useStore();
+  const [optimizing, setOptimizing] = useState(false);
+  const [outcome, setOutcome] = useState<{ moves: RescheduleMove[]; remaining: number } | null>(null);
+  const active = myCompetitions.filter((c) => c.status === "active");
+  // Everything below is scoped to the competitions the signed-in user belongs to.
+  const myTasks = useMemo(() => {
+    const ids = new Set(myCompetitions.map((c) => c.id));
+    return data.tasks.filter((t) => ids.has(t.competitionId));
+  }, [myCompetitions, data.tasks]);
+  const collisions = useMemo(() => detectCollisions(myCompetitions, myTasks, now), [myCompetitions, myTasks, now]);
+
+  function optimize() {
+    setOptimizing(true);
+    // Brief delay so the "AI" step is visible; the planner itself is deterministic and instant.
+    setTimeout(() => {
+      const plan = planReschedule(myCompetitions, myTasks, now);
+      if (plan.moves.length > 0) dispatch({ type: "reschedule", moves: plan.moves });
+      setOutcome(plan);
+      setOptimizing(false);
+    }, 900);
+  }
   const compName = (id: string) => data.competitions.find((c) => c.id === id)!;
 
   const myOpen = data.tasks
@@ -32,9 +68,30 @@ export default function Dashboard({
     return d.getTime();
   }, [now]);
   const dayIndex = (iso: string) => Math.floor((new Date(iso).getTime() - start) / DAY);
-  const load = workloadPerDay(data.tasks, now, DAYS);
+  const load = workloadPerDay(myTasks, now, DAYS);
   const maxLoad = Math.max(1, ...load);
   const collisionDays = new Set(collisions.flatMap((c) => c.items.map((i) => dayIndex(i.at))));
+
+  if (myCompetitions.length === 0) {
+    return (
+      <div className="glass mx-auto mt-6 max-w-2xl p-8 text-center">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-active/15 text-active">
+          <Radar size={26} />
+        </span>
+        <h2 className="mt-4 text-xl font-bold">Belum ada lomba</h2>
+        <p className="mx-auto mt-1 max-w-md text-sm text-white/60">Buat lomba baru sebagai Ketua, atau gabung ke tim temanmu dengan kode undangan.</p>
+        <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+          <button className="btn-primary" onClick={onCreate}>
+            <Plus size={16} /> Buat Lomba Baru
+          </button>
+          <button className="btn-ghost" onClick={onJoin}>
+            <KeyRound size={16} /> Gabung Lomba
+          </button>
+        </div>
+        <p className="mt-4 text-xs text-white/40">Kode contoh untuk dicoba: GEM-26, HACK-88, CTF-01</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -59,11 +116,40 @@ export default function Dashboard({
             <span className="text-xs font-normal text-white/40">jendela 48 jam lintas kompetisi</span>
           </h2>
           {collisions.length > 0 && (
-            <Badge tone="danger" pulse>
-              {collisions.length} peringatan
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="danger" pulse>
+                {collisions.length} peringatan
+              </Badge>
+              <button className="btn-danger !py-1.5 text-xs" onClick={optimize} disabled={optimizing}>
+                {optimizing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />} Optimasi Jadwal Bentrok (AI Rescheduler)
+              </button>
+            </div>
           )}
         </div>
+        {outcome && (
+          <div className={`mb-3 rounded-xl border p-4 text-sm ${outcome.remaining === 0 ? "border-safe/30 bg-safe/10" : "border-warn/30 bg-warn/10"}`} role="status">
+            <div className={`flex items-center gap-2 font-medium ${outcome.remaining === 0 ? "text-safe" : "text-warn"}`}>
+              {outcome.remaining === 0 ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+              {outcome.moves.length > 0
+                ? `${outcome.moves.length} tugas dipindahkan. Event Google Calendar dan Outlook sudah diperbarui.`
+                : "Tidak ada tugas yang bisa dipindahkan otomatis."}
+            </div>
+            {outcome.moves.length > 0 && (
+              <ul className="mt-2 space-y-1 text-xs text-white/70">
+                {outcome.moves.map((m) => (
+                  <li key={m.taskId}>
+                    <span className="font-medium text-white/90">{m.title}</span> ({compName(m.competitionId).title}): {fmtDateTime(m.from)} → <strong>{fmtDateTime(m.to)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {outcome.remaining > 0 && (
+              <p className="mt-2 text-xs text-white/70">
+                {outcome.remaining} bentrok tersisa melibatkan deadline final dua lomba atau tidak punya slot kosong. Bicarakan dengan Ketua tim untuk menggesernya manual.
+              </p>
+            )}
+          </div>
+        )}
         {collisions.length === 0 ? (
           <div className="flex items-center gap-3 rounded-xl border border-safe/30 bg-safe/10 p-4 text-sm text-safe">
             <ShieldCheck size={18} /> Aman — tidak ada tenggat berat yang berhimpitan antar-kompetisi.
@@ -252,6 +338,26 @@ export default function Dashboard({
           })}
           {myOpen.length === 0 && <li className="py-4 text-sm text-white/50">Semua tugas Anda sudah selesai. 🎉</li>}
         </ul>
+      </section>
+
+      {/* Notification log */}
+      <section className="glass p-4 sm:p-5" aria-labelledby="log-h">
+        <h2 id="log-h" className="mb-3 flex items-center gap-2 text-sm font-semibold">
+          <BellRing size={16} className="text-active" /> Log Notifikasi
+        </h2>
+        {data.notices.length === 0 ? (
+          <p className="text-xs text-white/40">Belum ada aktivitas. Pembaruan kalender, anggota baru, dan laporan akan muncul di sini.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.notices.slice(0, 6).map((n) => (
+              <li key={n.id} className="flex items-start gap-2.5 text-xs">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: TONE[n.tone].hex }} />
+                <span className="min-w-0 flex-1 text-white/80">{n.text}</span>
+                <span className="shrink-0 tabular-nums text-white/35">{fmtTime(n.at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

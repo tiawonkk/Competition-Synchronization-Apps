@@ -1,6 +1,7 @@
-import type { AdvisorReport, Competition, Member, Milestone, Resource, Task, User, WhiteboardElement } from "./types";
+import type { AdvisorReport, Competition, Member, Milestone, Notice, Resource, Task, User, WhiteboardElement } from "./types";
 
-export const CURRENT_USER_ID = "u1";
+export const TEAM_ROLES = ["Hustler / Lead", "Hacker / AI & Backend", "Hipster / UI-UX", "Researcher"] as const;
+export const AVATAR_COLORS = ["#3B82F6", "#EC4899", "#10B981", "#F59E0B", "#8B5CF6", "#06B6D4", "#EF4444", "#14B8A6"];
 
 export const NOTE_COLORS: Record<NonNullable<WhiteboardElement["kind"]>, string> = {
   ide: "#FEF08A",
@@ -18,6 +19,9 @@ export interface AppData {
   resources: Resource[];
   reports: AdvisorReport[];
   whiteboard: WhiteboardElement[];
+  notices: Notice[];
+  /** id of the signed-in user, or null on the login screen. Persisted with the rest of the data. */
+  session: string | null;
 }
 
 /** Builds realistic dummy data relative to `now` so alarms and collisions are always testable. */
@@ -31,9 +35,9 @@ export function buildSeed(now: number): AppData {
   const inHours = (h: number) => new Date(now + h * 3600_000).toISOString();
 
   const users: User[] = [
-    { id: "u1", fullName: "Raka Pratama", emailGoogle: "raka.pratama@gmail.com", emailMicrosoft: "raka.pratama@binus.ac.id", color: "#3B82F6" },
-    { id: "u2", fullName: "Salsabila Putri", emailGoogle: "salsabila.putri@gmail.com", emailMicrosoft: "salsabila.putri@binus.ac.id", color: "#EC4899" },
-    { id: "u3", fullName: "Dimas Anggara", emailMicrosoft: "dimas.anggara@binus.ac.id", color: "#10B981" },
+    { id: "u1", fullName: "Raka Pratama", emailGoogle: "raka.pratama@gmail.com", emailMicrosoft: "raka.pratama@binus.ac.id", color: "#3B82F6", headline: "Ketua Tim · AI Engineer" },
+    { id: "u2", fullName: "Salsabila Putri", emailGoogle: "salsabila.putri@gmail.com", emailMicrosoft: "salsabila.putri@binus.ac.id", color: "#EC4899", headline: "Anggota 2 · UI/UX Designer" },
+    { id: "u3", fullName: "Dimas Anggara", emailMicrosoft: "dimas.anggara@binus.ac.id", color: "#10B981", headline: "Anggota 3 · Backend / Security" },
     { id: "u4", fullName: "Nadya Kirana", emailGoogle: "nadya.kirana@gmail.com", emailMicrosoft: "nadya.kirana@binus.ac.id", color: "#F59E0B" },
     { id: "u5", fullName: "Fajar Ramadhan", emailGoogle: "fajar.ramadhan@gmail.com", color: "#8B5CF6" },
     { id: "u6", fullName: "Citra Lestari", emailGoogle: "citra.lestari@gmail.com", emailMicrosoft: "citra.lestari@binus.ac.id", color: "#06B6D4" },
@@ -53,6 +57,7 @@ export function buildSeed(now: number): AppData {
       gdriveFolderUrl: "https://drive.google.com/drive/folders/gemastik-ux-2026",
       status: "active",
       accent: "#3B82F6",
+      inviteCode: "GEM-26",
     },
     {
       id: "c2",
@@ -60,13 +65,14 @@ export function buildSeed(now: number): AppData {
       category: "Hackathon",
       theme: "Asisten AI untuk Layanan Kesehatan Primer",
       startDate: at(-9, 8),
-      submissionDeadline: at(7, 17),
+      submissionDeadline: at(14, 17),
       advisorName: "Maya Kusuma, S.T., M.T.",
       advisorEmail: "maya.kusuma@binus.ac.id",
       onedriveFolderUrl: "https://binus-my.sharepoint.com/personal/salsabila_putri/Hackathon-AI",
       gdriveFolderUrl: "https://drive.google.com/drive/folders/hackathon-ai-2026",
       status: "active",
       accent: "#A855F7",
+      inviteCode: "HACK-88",
     },
     {
       id: "c3",
@@ -74,28 +80,30 @@ export function buildSeed(now: number): AppData {
       category: "CTF",
       theme: "Penyisihan Online: Web, Crypto, Pwn, Forensics",
       startDate: at(-5, 8),
-      submissionDeadline: at(12, 20),
+      submissionDeadline: at(20, 20),
       advisorName: "Agus Santoso, M.Sc.",
       advisorEmail: "agus.santoso@binus.ac.id",
       onedriveFolderUrl: "https://binus-my.sharepoint.com/personal/dimas_anggara/CyberJawara",
       gdriveFolderUrl: "https://drive.google.com/drive/folders/cyberjawara-2026",
       status: "active",
       accent: "#EF4444",
+      inviteCode: "CTF-01",
     },
   ];
 
+  const [LEAD, HACK, UX, RES] = TEAM_ROLES;
   const members: Member[] = [
-    { competitionId: "c1", userId: "u1", role: "leader" },
-    { competitionId: "c1", userId: "u2", role: "member" },
-    { competitionId: "c1", userId: "u3", role: "member" },
-    { competitionId: "c1", userId: "u4", role: "member" },
-    { competitionId: "c2", userId: "u2", role: "leader" },
-    { competitionId: "c2", userId: "u1", role: "member" },
-    { competitionId: "c2", userId: "u5", role: "member" },
-    { competitionId: "c2", userId: "u6", role: "member" },
-    { competitionId: "c3", userId: "u3", role: "leader" },
-    { competitionId: "c3", userId: "u1", role: "member" },
-    { competitionId: "c3", userId: "u5", role: "member" },
+    { competitionId: "c1", userId: "u1", role: "leader", teamRole: LEAD },
+    { competitionId: "c1", userId: "u2", role: "member", teamRole: UX },
+    { competitionId: "c1", userId: "u3", role: "member", teamRole: HACK },
+    { competitionId: "c1", userId: "u4", role: "member", teamRole: RES },
+    { competitionId: "c2", userId: "u2", role: "leader", teamRole: LEAD },
+    { competitionId: "c2", userId: "u1", role: "member", teamRole: HACK },
+    { competitionId: "c2", userId: "u5", role: "member", teamRole: HACK },
+    { competitionId: "c2", userId: "u6", role: "member", teamRole: RES },
+    { competitionId: "c3", userId: "u3", role: "leader", teamRole: LEAD },
+    { competitionId: "c3", userId: "u1", role: "member", teamRole: HACK },
+    { competitionId: "c3", userId: "u5", role: "member", teamRole: HACK },
   ];
 
   const milestones: Milestone[] = [
@@ -103,11 +111,11 @@ export function buildSeed(now: number): AppData {
     { id: "m1b", competitionId: "c1", title: "Desain & Prototipe", targetDate: at(3, 23), orderIndex: 1 },
     { id: "m1c", competitionId: "c1", title: "Validasi & Pengumpulan", targetDate: at(6, 23, 59), orderIndex: 2 },
     { id: "m2a", competitionId: "c2", title: "Data & Model Dasar", targetDate: at(-3, 23), orderIndex: 0 },
-    { id: "m2b", competitionId: "c2", title: "Integrasi & Demo", targetDate: at(4, 23), orderIndex: 1 },
-    { id: "m2c", competitionId: "c2", title: "Pitching & Dokumentasi", targetDate: at(7, 12), orderIndex: 2 },
+    { id: "m2b", competitionId: "c2", title: "Integrasi & Demo", targetDate: at(10, 23), orderIndex: 1 },
+    { id: "m2c", competitionId: "c2", title: "Pitching & Dokumentasi", targetDate: at(14, 12), orderIndex: 2 },
     { id: "m3a", competitionId: "c3", title: "Persiapan Lab Latihan", targetDate: at(-1, 23), orderIndex: 0 },
     { id: "m3b", competitionId: "c3", title: "Latihan Kategori Soal", targetDate: at(8, 23), orderIndex: 1 },
-    { id: "m3c", competitionId: "c3", title: "Simulasi & Hari-H", targetDate: at(12, 20), orderIndex: 2 },
+    { id: "m3c", competitionId: "c3", title: "Simulasi & Hari-H", targetDate: at(20, 20), orderIndex: 2 },
   ];
 
   const base = { alarmActive: true } as const;
@@ -137,11 +145,11 @@ export function buildSeed(now: number): AppData {
     // --- Hackathon Nasional AI ---
     { id: "t201", competitionId: "c2", milestoneId: "m2a", assignedTo: "u5", title: "Pengumpulan dataset & EDA", description: "Dataset keluhan pasien (anonim) dan eksplorasi data.", dueDate: at(-6, 18), priority: "high", ...done(`${G}dataset-eda`, 6) },
     { id: "t202", competitionId: "c2", milestoneId: "m2a", assignedTo: "u6", title: "Model baseline klasifikasi triase", description: "Baseline IndoBERT dengan metrik F1.", dueDate: at(-3, 20), priority: "high", ...done(`${G}baseline-triase`, 3) },
-    { id: "t203", competitionId: "c2", milestoneId: "m2b", assignedTo: "u5", title: "Fine-tuning model & evaluasi", description: "Tuning hyperparameter dan analisis error.", dueDate: at(1, 22), priority: "high", ...base, isCompleted: false },
-    { id: "t204", competitionId: "c2", milestoneId: "m2b", assignedTo: "u1", title: "Deck pitch final (10 slide)", description: "Narasi masalah, solusi, demo, dan model bisnis.", dueDate: at(3, 9), priority: "critical", ...base, isCompleted: false },
-    { id: "t205", competitionId: "c2", milestoneId: "m2b", assignedTo: "u6", title: "Deploy API demo & uji beban", description: "Deploy ke cloud dengan endpoint publik.", dueDate: at(4, 15), priority: "high", ...base, isCompleted: false },
-    { id: "t206", competitionId: "c2", milestoneId: "m2c", assignedTo: "u1", title: "Dokumentasi arsitektur sistem", description: "Diagram arsitektur dan alur data.", dueDate: at(5, 18), priority: "medium", ...base, isCompleted: false },
-    { id: "t207", competitionId: "c2", milestoneId: "m2c", assignedTo: "u2", title: "Video pitch 5 menit", description: "Rekam dan edit video pitch.", dueDate: at(6, 14), priority: "critical", ...base, isCompleted: false },
+    { id: "t203", competitionId: "c2", milestoneId: "m2b", assignedTo: "u5", title: "Fine-tuning model & evaluasi", description: "Tuning hyperparameter dan analisis error.", dueDate: at(7, 20), priority: "high", ...base, isCompleted: false },
+    { id: "t204", competitionId: "c2", milestoneId: "m2b", assignedTo: "u1", title: "Deck pitch final (10 slide)", description: "Narasi masalah, solusi, demo, dan model bisnis.", dueDate: at(7, 10), priority: "critical", ...base, isCompleted: false },
+    { id: "t205", competitionId: "c2", milestoneId: "m2b", assignedTo: "u6", title: "Deploy API demo & uji beban", description: "Deploy ke cloud dengan endpoint publik.", dueDate: at(9, 15), priority: "high", ...base, isCompleted: false },
+    { id: "t206", competitionId: "c2", milestoneId: "m2c", assignedTo: "u1", title: "Dokumentasi arsitektur sistem", description: "Diagram arsitektur dan alur data.", dueDate: at(10, 18), priority: "medium", ...base, isCompleted: false },
+    { id: "t207", competitionId: "c2", milestoneId: "m2c", assignedTo: "u2", title: "Video pitch 5 menit", description: "Rekam dan edit video pitch.", dueDate: at(11, 14), priority: "critical", ...base, isCompleted: false },
 
     // --- CyberJawara CTF ---
     { id: "t301", competitionId: "c3", milestoneId: "m3a", assignedTo: "u5", title: "Setup lab latihan (Docker)", description: "Lab lokal untuk soal web dan pwn.", dueDate: at(-2, 17), priority: "medium", ...done(`${O}fajar/lab-setup`, 2) },
@@ -149,7 +157,7 @@ export function buildSeed(now: number): AppData {
     { id: "t303", competitionId: "c3", milestoneId: "m3b", assignedTo: "u3", title: "Latihan kriptografi", description: "RSA, ECC, dan serangan padding oracle.", dueDate: at(5, 19), priority: "medium", ...base, isCompleted: false },
     { id: "t304", competitionId: "c3", milestoneId: "m3b", assignedTo: "u5", title: "Latihan pwn & reverse engineering", description: "Buffer overflow dan ROP dasar.", dueDate: at(7, 19), priority: "medium", ...base, isCompleted: false },
     { id: "t305", competitionId: "c3", milestoneId: "m3b", assignedTo: "u1", title: "Template writeup & cheatsheet", description: "Template writeup bersama.", dueDate: at(9, 17), priority: "low", ...base, isCompleted: false },
-    { id: "t306", competitionId: "c3", milestoneId: "m3c", assignedTo: "u3", title: "Simulasi CTF 6 jam", description: "Simulasi penuh dengan soal tahun lalu.", dueDate: at(10, 9), priority: "high", ...base, isCompleted: false },
+    { id: "t306", competitionId: "c3", milestoneId: "m3c", assignedTo: "u3", title: "Simulasi CTF 6 jam", description: "Simulasi penuh dengan soal tahun lalu.", dueDate: at(17, 9), priority: "high", ...base, isCompleted: false },
   ];
   const tasks: Task[] = raw.map((t) => ({
     ...t,
@@ -188,5 +196,5 @@ export function buildSeed(now: number): AppData {
     note('w9', 'c1', 'kendala', 'Banyak pengguna UMKM belum nyaman dengan istilah akuntansi.', 200, 280, ['u1', 'u3'], 'u3'),
   ];
 
-  return { users, competitions, members, milestones, tasks, resources, reports: [], whiteboard };
+  return { users, competitions, members, milestones, tasks, resources, reports: [], whiteboard, notices: [], session: null };
 }

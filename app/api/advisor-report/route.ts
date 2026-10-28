@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * GET /api/advisor-report — weekly cron (e.g. Vercel Cron "0 1 * * 1" = Monday 08:00 WIB).
+ * GET /api/advisor-report — weekly cron, Sunday 19:00 WIB (Vercel Cron "0 12 * * 0", UTC). Only competitions with auto_send_weekly = true.
  * Authorization: Bearer <CRON_SECRET>. Sends one report per active competition using the service role.
  */
 export async function GET(req: NextRequest) {
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const admin = serviceClient();
-  const { data: comps } = await admin.from("competitions").select("id").eq("status", "active").not("advisor_email", "is", null);
+  const { data: comps } = await admin.from("competitions").select("id").eq("status", "active").eq("auto_send_weekly", true).not("advisor_email", "is", null);
   const results = [];
   for (const c of comps ?? []) {
     const r = await dispatchReport(admin, c.id, true);

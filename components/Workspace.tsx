@@ -1,35 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  BellRing,
-  Calendar,
-  CheckCircle2,
-  Cloud,
-  ExternalLink,
-  FileArchive,
-  FileText,
-  FolderOpen,
-  Mail,
-  Network,
-  Presentation,
-  Send,
-  Volume2,
-} from "lucide-react";
+import { BellRing, Calendar, CheckCircle2, ExternalLink, KeyRound, Mail, Send, Volume2, Zap } from "lucide-react";
 import { useState } from "react";
 import { DAY, dueState, fmtDate, fmtDateTime, PRIORITY_LABEL, relative, scoreTone } from "@/lib/logic";
 import { useStore } from "@/lib/store";
-import type { ResourceKind, Task } from "@/lib/types";
+import type { Task } from "@/lib/types";
+import CloudVault from "./CloudVault";
 import { Avatar, Badge, Gauge, PRIORITY_TONE, TONE } from "./ui";
 import Whiteboard from "./Whiteboard";
-
-const KIND_ICON: Record<ResourceKind, typeof FileText> = {
-  guidebook: FileText,
-  diagram: Network,
-  deck: Presentation,
-  zip: FileArchive,
-  other: FileText,
-};
 
 export default function Workspace({
   competitionId,
@@ -45,19 +24,30 @@ export default function Workspace({
   const { data, now, me, readiness } = useStore();
   const [assignee, setAssignee] = useState<string>("all");
   const [showDone, setShowDone] = useState(true);
-  const [tab, setTab] = useState<"tasks" | "board">("tasks");
+  const [tab, setTab] = useState<"tasks" | "board" | "vault">("tasks");
+  const [copied, setCopied] = useState(false);
 
   const comp = data.competitions.find((c) => c.id === competitionId)!;
   const team = data.members.filter((m) => m.competitionId === competitionId);
   const tasks = data.tasks.filter((t) => t.competitionId === competitionId);
   const milestones = data.milestones.filter((m) => m.competitionId === competitionId).sort((a, b) => a.orderIndex - b.orderIndex);
-  const resources = data.resources.filter((r) => r.competitionId === competitionId);
   const userOf = (id: string | null) => data.users.find((u) => u.id === id);
   const score = readiness(competitionId);
   const done = tasks.filter((t) => t.isCompleted).length;
   const proofs = tasks.filter((t) => t.proofUrl).length;
   const daysLeft = Math.ceil((new Date(comp.submissionDeadline).getTime() - now) / DAY);
-  const myRole = team.find((m) => m.userId === me)?.role;
+  const myMember = team.find((m) => m.userId === me);
+  const myRole = myMember?.role;
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(comp.inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard blocked: the code stays visible to copy by hand */
+    }
+  }
 
   const visible = (t: Task) => (assignee === "all" || t.assignedTo === assignee) && (showDone || !t.isCompleted);
 
@@ -72,10 +62,21 @@ export default function Workspace({
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="active">{comp.category}</Badge>
               <Badge tone={daysLeft <= 3 ? "danger" : daysLeft <= 7 ? "warn" : "safe"}>{daysLeft} hari menuju deadline</Badge>
-              {myRole && <Badge tone="neutral">Peran Anda: {myRole === "leader" ? "Ketua" : "Anggota"}</Badge>}
+              {myRole && <Badge tone="neutral">Peran Anda: {myRole === "leader" ? "Ketua" : "Anggota"}{myMember?.teamRole ? ` · ${myMember.teamRole}` : ""}</Badge>}
             </div>
             <h1 className="mt-1.5 text-xl font-bold sm:text-2xl">{comp.title}</h1>
             <p className="text-sm text-white/60">{comp.theme}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/60">
+              <KeyRound size={13} /> Kode undangan:
+              <button
+                onClick={copyCode}
+                className="rounded-md border border-white/15 bg-white/[0.06] px-2 py-0.5 font-mono font-semibold tracking-wider text-white hover:bg-white/10"
+                title="Salin kode undangan"
+              >
+                {comp.inviteCode}
+              </button>
+              <span className="text-white/40">{copied ? "Tersalin!" : `${team.length}/5 anggota`}</span>
+            </div>
             <p className="mt-1 text-xs text-white/40">
               Deadline final: {fmtDateTime(comp.submissionDeadline)} · {done}/{tasks.length} tugas selesai · {proofs} bukti terunggah
             </p>
@@ -90,6 +91,7 @@ export default function Workspace({
         {([
           ["tasks", "Tugas & Milestone"],
           ["board", "Whiteboard & Ideasi"],
+          ["vault", "Cloud Vault"],
         ] as const).map(([id, label]) => (
           <button
             key={id}
@@ -105,8 +107,10 @@ export default function Workspace({
 
       {tab === "board" ? (
         <Whiteboard competitionId={competitionId} onGoTasks={() => setTab("tasks")} />
+      ) : tab === "vault" ? (
+        <CloudVault competitionId={competitionId} />
       ) : (
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+      <div>
         <div className="space-y-5">
           {/* Team */}
           <section className="glass p-4 sm:p-5" aria-labelledby="team-h">
@@ -131,6 +135,7 @@ export default function Workspace({
                       <span className="block text-xs font-medium leading-tight">
                         {u.fullName.split(" ")[0]} {m.role === "leader" && <span className="text-warn">★</span>}
                       </span>
+                      {m.teamRole && <span className="block text-[9px] leading-tight text-white/45">{m.teamRole}</span>}
                       <span className="flex gap-1 pt-0.5">
                         {u.emailGoogle && (
                           <span className="rounded bg-white/10 px-1 text-[9px] text-white/70" title={u.emailGoogle}>
@@ -214,52 +219,6 @@ export default function Workspace({
           </section>
         </div>
 
-        {/* Cloud vault */}
-        <aside className="space-y-5">
-          <section className="glass p-4 sm:p-5" aria-labelledby="vault-h">
-            <h2 id="vault-h" className="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <Cloud size={16} className="text-active" /> Brankas Cloud
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              {comp.onedriveFolderUrl && (
-                <a href={comp.onedriveFolderUrl} target="_blank" rel="noreferrer" className="rounded-xl border border-active/30 bg-active/10 p-3 transition hover:bg-active/20">
-                  <FolderOpen size={18} className="text-active" />
-                  <div className="mt-1.5 text-xs font-semibold">OneDrive Pro</div>
-                  <div className="text-[10px] text-white/50">Folder bersama M365</div>
-                </a>
-              )}
-              {comp.gdriveFolderUrl && (
-                <a href={comp.gdriveFolderUrl} target="_blank" rel="noreferrer" className="rounded-xl border border-safe/30 bg-safe/10 p-3 transition hover:bg-safe/20">
-                  <FolderOpen size={18} className="text-safe" />
-                  <div className="mt-1.5 text-xs font-semibold">Google Drive</div>
-                  <div className="text-[10px] text-white/50">Folder bersama Gmail</div>
-                </a>
-              )}
-            </div>
-            <ul className="mt-3 space-y-1.5">
-              {resources.map((r) => {
-                const Icon = KIND_ICON[r.kind];
-                return (
-                  <li key={r.id}>
-                    <a href={r.url} target="_blank" rel="noreferrer" className="group flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-white/[0.06]">
-                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${r.provider === "onedrive" ? "bg-active/15 text-active" : "bg-safe/15 text-safe"}`}>
-                        <Icon size={16} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium">{r.title}</span>
-                        <span className="text-[10px] text-white/40">
-                          {r.provider === "onedrive" ? "OneDrive" : "Google Drive"} · {r.meta}
-                        </span>
-                      </span>
-                      <ExternalLink size={13} className="text-white/20 group-hover:text-white/70" />
-                    </a>
-                  </li>
-                );
-              })}
-              {resources.length === 0 && <li className="text-xs text-white/40">Belum ada dokumen.</li>}
-            </ul>
-          </section>
-        </aside>
       </div>
       )}
     </div>
@@ -267,7 +226,9 @@ export default function Workspace({
 }
 
 function TaskRow({ task, onComplete, onTestAlarm }: { task: Task; onComplete: (id: string) => void; onTestAlarm: (id: string) => void }) {
-  const { data, now, me } = useStore();
+  const { data, now, me, dispatch } = useStore();
+  const team = data.members.filter((m) => m.competitionId === task.competitionId);
+  const isLeader = team.some((m) => m.userId === me && m.role === "leader");
   const user = data.users.find((u) => u.id === task.assignedTo);
   const state = dueState(task, now);
   const mine = task.assignedTo === me;
@@ -297,6 +258,13 @@ function TaskRow({ task, onComplete, onTestAlarm }: { task: Task; onComplete: (i
               {task.isCompleted ? `Selesai ${fmtDate(task.completedAt!)}` : `${fmtDateTime(task.dueDate)} · ${relative(task.dueDate, now)}`}
             </Badge>
             {task.sourceNoteId && <Badge tone="warn">💡 Dari whiteboard</Badge>}
+            {task.rescheduledFrom && !task.isCompleted && (
+              <span title={`Semula ${fmtDateTime(task.rescheduledFrom)}`}>
+                <Badge tone="safe">
+                  <Zap size={11} /> Dijadwal ulang AI
+                </Badge>
+              </span>
+            )}
             {task.gcalEventId && !task.isCompleted && <span title="Terjadwal di Google Calendar" className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/60">GCal</span>}
             {task.outlookEventId && !task.isCompleted && <span title="Terjadwal di Outlook" className="rounded bg-active/20 px-1.5 py-0.5 text-[10px] text-active">Outlook</span>}
             {task.isCompleted && (task.gcalEventId || task.outlookEventId) && <span className="text-[10px] text-white/30">pengingat kalender dinonaktifkan</span>}
@@ -308,7 +276,21 @@ function TaskRow({ task, onComplete, onTestAlarm }: { task: Task; onComplete: (i
           </div>
         </div>
         {!task.isCompleted && (
-          <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row">
+          <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-center">
+            {isLeader && (
+              <select
+                className="field !w-auto !py-1.5 text-xs"
+                value={task.assignedTo ?? ""}
+                onChange={(e) => dispatch({ type: "assign", taskId: task.id, userId: e.target.value })}
+                aria-label={`Ubah penanggung jawab: ${task.title}`}
+              >
+                {team.map((m) => (
+                  <option key={m.userId} value={m.userId}>
+                    {data.users.find((u) => u.id === m.userId)?.fullName.split(" ")[0]}
+                  </option>
+                ))}
+              </select>
+            )}
             {mine && (
               <button className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={() => onTestAlarm(task.id)} title="Uji alarm berdering untuk tugas ini">
                 <Volume2 size={14} /> Uji Alarm

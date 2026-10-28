@@ -1,18 +1,22 @@
 "use client";
 
-import { CheckCircle2, Loader2, Mail, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, RefreshCw, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { fmtDateTime, fmtWib, nextAutoSend, uid } from "@/lib/logic";
 import { generateAdvisorReport } from "@/lib/report";
-import { uid } from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import { Badge, Modal } from "../ui";
 
 export default function ReportModal({ competitionId, onClose }: { competitionId: string | null; onClose: () => void }) {
-  const { data, now, dispatch } = useStore();
+  const { data, now, me, dispatch } = useStore();
   const [nonce, setNonce] = useState(0);
   const [phase, setPhase] = useState<"idle" | "sending" | "sent">("idle");
+  const [viewing, setViewing] = useState<string | null>(null); // id of a past report shown in the preview
 
-  useEffect(() => setPhase("idle"), [competitionId]);
+  useEffect(() => {
+    setPhase("idle");
+    setViewing(null);
+  }, [competitionId]);
 
   // `nonce` forces regeneration after tasks change while the modal is open
   const report = useMemo(
@@ -21,12 +25,15 @@ export default function ReportModal({ competitionId, onClose }: { competitionId:
     [competitionId, data, nonce],
   );
   const comp = data.competitions.find((c) => c.id === competitionId);
-  const previous = data.reports.filter((r) => r.competitionId === competitionId);
+  const history = data.reports.filter((r) => r.competitionId === competitionId);
+  const past = history.find((r) => r.id === viewing);
+  const isLeader = data.members.some((m) => m.competitionId === competitionId && m.userId === me && m.role === "leader");
+  const next = useMemo(() => nextAutoSend(now), [now]);
 
   function send() {
-    if (!report || !comp) return;
+    if (!report || !comp || !isLeader) return;
     setPhase("sending");
-    // Simulated send: in production this POSTs to a Route Handler that calls Resend with report.html.
+    // Simulated send: in production this POSTs to /api/advisor-report with { send: true }, which calls Resend.
     setTimeout(() => {
       dispatch({
         type: "saveReport",
@@ -54,36 +61,74 @@ export default function ReportModal({ competitionId, onClose }: { competitionId:
               {comp.advisorName} &lt;{comp.advisorEmail}&gt;
             </span>
             <span className="text-white/40">Subjek</span>
-            <span>{report.subject}</span>
+            <span>{past ? `[Arsip] Laporan minggu ${past.weekNumber}` : report.subject}</span>
           </div>
 
-          <div className="mt-3 max-h-[46vh] overflow-y-auto rounded-xl bg-[#ffffff]" aria-label="Pratinjau email">
-            <div dangerouslySetInnerHTML={{ __html: report.html }} />
+          <div className="mt-3 max-h-[40vh] overflow-y-auto rounded-xl bg-[#ffffff]" aria-label="Pratinjau email">
+            <div dangerouslySetInnerHTML={{ __html: past ? past.html : report.html }} />
           </div>
-
-          {previous.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/50">
-              Riwayat:
-              {previous.map((r) => (
-                <Badge key={r.id} tone="safe">
-                  Minggu {r.weekNumber} terkirim ke {r.sentToEmail}
-                </Badge>
-              ))}
-            </div>
+          {past && (
+            <button className="mt-2 text-xs text-active hover:underline" onClick={() => setViewing(null)}>
+              Kembali ke laporan terbaru
+            </button>
           )}
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <label className={`flex items-center gap-3 text-sm ${isLeader ? "cursor-pointer" : "opacity-60"}`}>
+              <input
+                type="checkbox"
+                role="switch"
+                className="h-4 w-4 accent-blue-500"
+                checked={!!comp.autoSendWeekly}
+                disabled={!isLeader}
+                onChange={(e) => dispatch({ type: "setAutoSend", competitionId: comp.id, on: e.target.checked })}
+              />
+              <span>
+                <span className="block font-medium">Auto-Send Setiap Minggu (19:00 WIB)</span>
+                <span className="flex items-center gap-1 text-xs text-white/50">
+                  <Clock size={12} />
+                  {comp.autoSendWeekly ? `Pengiriman berikutnya: ${fmtWib(next)}` : "Nonaktif"}
+                </span>
+              </span>
+            </label>
+            {!isLeader && <span className="text-xs text-white/45">Hanya Ketua yang dapat mengubah atau mengirim.</span>}
+          </div>
+
+          <div className="mt-3">
+            <div className="mb-1.5 text-xs font-semibold text-white/60">Riwayat pengiriman ({history.length})</div>
+            {history.length === 0 ? (
+              <p className="text-xs text-white/40">Belum ada laporan yang dikirim.</p>
+            ) : (
+              <ul className="max-h-32 space-y-1 overflow-y-auto">
+                {history.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      onClick={() => setViewing(r.id)}
+                      className={`flex w-full flex-wrap items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition hover:bg-white/[0.06] ${viewing === r.id ? "bg-active/10" : ""}`}
+                    >
+                      <Badge tone={r.status === "sent" ? "safe" : "warn"}>{r.status === "sent" ? "Terkirim" : "Draf"}</Badge>
+                      <span className="font-medium">Minggu {r.weekNumber}</span>
+                      <span className="text-white/45">ke {r.sentToEmail}</span>
+                      <span className="ml-auto text-white/40">{fmtDateTime(r.sentAt)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
             <button className="btn-ghost" onClick={() => setNonce((n) => n + 1)}>
               <RefreshCw size={15} /> Segarkan data
             </button>
             {phase === "sent" ? (
-              <span className="flex items-center gap-2 text-sm text-safe">
+              <span className="flex items-center gap-2 text-sm text-safe" role="status">
                 <CheckCircle2 size={18} /> Terkirim (simulasi) ke {comp.advisorEmail}
               </span>
             ) : (
-              <button className="btn-primary" onClick={send} disabled={phase === "sending"}>
+              <button className="btn-primary" onClick={send} disabled={phase === "sending" || !isLeader} title={isLeader ? undefined : "Hanya Ketua yang dapat mengirim laporan"}>
                 {phase === "sending" ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                <Mail size={16} /> Kirim ke Pembina via Email
+                Kirim Laporan ke Email Pembina Sekarang
               </button>
             )}
           </div>

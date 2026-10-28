@@ -87,7 +87,7 @@ export function detectCollisions(
     if (t.isCompleted || (t.priority !== "high" && t.priority !== "critical")) continue;
     if (!active.some((c) => c.id === t.competitionId)) continue;
     if (new Date(t.dueDate).getTime() < now - DAY) continue;
-    items.push({ competitionId: t.competitionId, label: t.title, at: t.dueDate, priority: t.priority });
+    items.push({ competitionId: t.competitionId, taskId: t.id, label: t.title, at: t.dueDate, priority: t.priority });
   }
 
   type Pair = { a: CollisionItem; b: CollisionItem; h: number; heavy: boolean };
@@ -175,3 +175,100 @@ export function isValidProofUrl(value: string): boolean {
     return false;
   }
 }
+
+// ---------- AI rescheduler ----------
+export interface RescheduleMove {
+  taskId: string;
+  competitionId: string;
+  title: string;
+  from: string;
+  to: string;
+}
+
+/**
+ * Resolves collisions by moving the lighter *internal* task of each colliding pair (final deadlines are fixed);
+ * on a tie, the competition with the later final deadline has more slack, so it yields.
+ * Tasks shift in whole days, so their time of day is kept; earlier is preferred, later is the fallback.
+ * A candidate slot is only accepted if it stays clear of every heavy item from other competitions, so one fix never creates the next collision.
+ */
+export function planReschedule(competitions: Competition[], tasks: Task[], now: number): { moves: RescheduleMove[]; remaining: number } {
+  const work = tasks.map((t) => ({ ...t }));
+  const origin = new Map<string, string>();
+  const stuck = new Set<string>();
+  const active = competitions.filter((c) => c.status === "active" || c.status === "planning");
+  const isActive = (id: string) => active.some((c) => c.id === id);
+  const deadlineOf = (id: string) => new Date(competitions.find((c) => c.id === id)?.submissionDeadline ?? now).getTime();
+
+  const heavyElsewhere = (task: Task): number[] => {
+    const times = active.filter((c) => c.id !== task.competitionId).map((c) => new Date(c.submissionDeadline).getTime());
+    for (const t of work) {
+      if (t.id === task.id || t.competitionId === task.competitionId || t.isCompleted) continue;
+      if ((t.priority === "high" || t.priority === "critical") && isActive(t.competitionId)) times.push(new Date(t.dueDate).getTime());
+    }
+    return times;
+  };
+  const clear = (time: number, others: number[]) => others.every((o) => Math.abs(o - time) > COLLISION_WINDOW_H * HOUR);
+
+  for (let pass = 0; pass < 12; pass++) {
+    const open = detectCollisions(competitions, work, now).filter((c) => !stuck.has(c.id));
+    if (open.length === 0) break;
+    for (const col of open) {
+      const movable = col.items
+        .map((i) => work.find((t) => t.id === i.taskId))
+        .filter((t): t is Task => !!t)
+        .sort((a, b) => WEIGHT[a.priority] - WEIGHT[b.priority] || deadlineOf(b.competitionId) - deadlineOf(a.competitionId) || +new Date(a.dueDate) - +new Date(b.dueDate));
+      let moved = false;
+      for (const t of movable) {
+        const at = new Date(t.dueDate).getTime();
+        const others = heavyElsewhere(t);
+        let to: number | null = null;
+        for (let k = 1; k <= 14 && to === null; k++) {
+          const c = at - k * DAY;
+          if (c < now + 2 * HOUR) break;
+          if (clear(c, others)) to = c;
+        }
+        for (let k = 1; k <= 14 && to === null; k++) {
+          const c = at + k * DAY;
+          if (c > deadlineOf(t.competitionId) - HOUR) break;
+          if (clear(c, others)) to = c;
+        }
+        if (to === null) continue;
+        if (!origin.has(t.id)) origin.set(t.id, t.dueDate);
+        t.dueDate = new Date(to).toISOString();
+        moved = true;
+        break;
+      }
+      if (!moved) stuck.add(col.id);
+    }
+  }
+
+  const moves: RescheduleMove[] = [];
+  for (const [id, from] of origin) {
+    const t = work.find((x) => x.id === id)!;
+    if (t.dueDate !== from) moves.push({ taskId: id, competitionId: t.competitionId, title: t.title, from, to: t.dueDate });
+  }
+  return { moves, remaining: detectCollisions(competitions, work, now).length };
+}
+
+// ---------- Invite codes & weekly auto-send ----------
+/** "Hackathon Nasional AI" -> "HACK-88". Retries until the code is unused. */
+export function makeInviteCode(title: string, taken: string[]): string {
+  const prefix = title.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4) || "TIM";
+  for (let i = 0; i < 200; i++) {
+    const code = `${prefix}-${10 + Math.floor(Math.random() * 90)}`;
+    if (!taken.includes(code)) return code;
+  }
+  return `${prefix}-${Date.now().toString().slice(-4)}`;
+}
+
+/** Next Sunday 19:00 WIB (= 12:00 UTC) strictly after `now`. */
+export function nextAutoSend(now: number): Date {
+  const d = new Date(now);
+  d.setUTCHours(12, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7));
+  if (d.getTime() <= now) d.setUTCDate(d.getUTCDate() + 7);
+  return d;
+}
+
+const wibFmt = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" });
+export const fmtWib = (d: Date) => `${wibFmt.format(d).replace(".", ":")} WIB`;

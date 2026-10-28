@@ -10,6 +10,7 @@ export interface User {
   emailGoogle?: string;
   emailMicrosoft?: string;
   color: string; // avatar accent
+  headline?: string; // short persona label shown on the login screen
 }
 
 export interface Competition {
@@ -25,12 +26,15 @@ export interface Competition {
   gdriveFolderUrl?: string;
   status: CompetitionStatus;
   accent: string; // UI accent color
+  inviteCode: string; // e.g. "HACK-88"; teammates join with it
+  autoSendWeekly?: boolean; // auto-send the advisor report every Sunday 19:00 WIB
 }
 
 export interface Member {
   competitionId: string;
   userId: string;
   role: Role;
+  teamRole?: string; // free-form team function, e.g. "Hacker / AI & Backend"
 }
 
 export interface Milestone {
@@ -57,6 +61,7 @@ export interface Task {
   outlookEventId?: string;
   alarmActive: boolean;
   sourceNoteId?: string;
+  rescheduledFrom?: string; // ISO due date before the AI rescheduler moved it
 }
 
 export interface Resource {
@@ -67,6 +72,7 @@ export interface Resource {
   provider: Provider;
   url: string;
   meta: string;
+  addedBy?: string;
 }
 
 export interface AdvisorReport {
@@ -83,6 +89,7 @@ export type DueState = "done" | "overdue" | "urgent" | "soon" | "ok";
 
 export interface CollisionItem {
   competitionId: string;
+  taskId?: string; // absent for final deadlines, which can't be moved
   label: string;
   at: string;
   priority: Priority | "deadline";
@@ -115,4 +122,12 @@ export interface WhiteboardElement {
   createdBy: string;
   updatedAt: string;
   taskId?: string; // set once the note has been converted into a task
+}
+
+/** Entry in the in-app notification log (calendar updates, joins, alarms silenced...). */
+export interface Notice {
+  id: string;
+  at: string;
+  text: string;
+  tone: "safe" | "active" | "warn";
 }

@@ -2,20 +2,22 @@
 
 Aplikasi PWA untuk mahasiswa yang mengikuti beberapa kompetisi sekaligus (Hackathon, CTF, UI/UX, Business Case). CompeteSync membantu tim menghindari bentrok jadwal, menjaga akuntabilitas lewat alarm yang terus berbunyi sampai tugas dikonfirmasi, dan melapor ke Pembina secara otomatis.
 
-> **Status:** prototipe interaktif (Phase 1–2). UI berjalan penuh dengan data dummy di memori. Skema database dan rute API sudah ditulis tetapi **belum tersambung ke UI** (lihat [Roadmap](#roadmap)).
+> **Status:** prototipe interaktif yang berjalan penuh di browser. Data (akun, lomba, tugas, whiteboard) disimpan di `localStorage`, jadi bertahan setelah refresh tetapi **hanya ada di browser itu**. Skema Supabase, rute API, dan helper login sudah ditulis tetapi **belum tersambung ke UI** (lihat [Roadmap](#roadmap)).
 
 ## Fitur
 
 | Fitur | Keterangan |
 |---|---|
+| **Login & Ganti Akun** | Masuk dengan Microsoft 365 (@binus.ac.id) atau Google (@gmail.com), daftar akun baru, atau pilih akun uji cepat (Ketua, Anggota 2, Anggota 3). Menu profil memungkinkan ganti akun tanpa kehilangan data, dan tombol Keluar mengembalikan ke layar masuk. Di mode demo, tombol penyedia hanya mencocokkan domain email; tidak ada OAuth sungguhan. |
+| **Buat Lomba & Gabung via Kode** | Ketua membuat lomba (kategori, tema, deadline, email Pembina, folder OneDrive/Drive) dan mendapat kode undangan otomatis, misalnya `HACK-88`. Anggota lain memasukkan kode dan memilih peran tim; batas 5 anggota ditegakkan. Tombol AI membuat milestone dan tugas, termasuk poin dari guidebook yang ditempel. |
+| **AI Rescheduler** | Satu klik memindahkan tugas internal yang bentrok (deadline final tidak digeser) ke hari kosong terdekat, lalu menulis log pembaruan kalender. |
 | **Radar Bentrok Jadwal** | Mendeteksi tenggat berat (prioritas Tinggi/Kritis dan deadline final) dari kompetisi berbeda dalam jendela 48 jam, lengkap dengan saran memajukan jadwal internal. |
 | **Skor Kesiapan** | 0–100% per kompetisi: 70% rasio tugas selesai + 30% rasio deliverable bertautan bukti, dibobot menurut prioritas. |
 | **Alarm Berdering (Stop-on-Confirm)** | Alarm Web Audio API (tanpa file MP3) untuk tugas yang jatuh tempo < 24 jam atau terlambat. Hanya berhenti setelah tugas ditandai selesai dengan tautan bukti OneDrive/Google Drive. |
 | **Ruang Kerja Tim** | 3–5 anggota dengan peran Ketua/Anggota/Pembina, lencana akun Gmail dan M365 Binus, milestone, daftar tugas dengan filter penanggung jawab. |
 | **Whiteboard & Ideasi** | Kanvas yang bisa digeser dan di-zoom: catatan tempel berwarna (Ide Utama, Fitur, Riset, Kendala), pena bebas, penghapus, voting +1, dan tombol **⚡ Jadikan Tugas** yang langsung membuat tugas dan menghitung ulang skor kesiapan. |
-| **Brankas Cloud** | Tautan folder dan dokumen (guidebook, diagram, pitch deck, ZIP) di OneDrive Pro dan Google Drive. |
-| **Laporan Pembina** | Pratinjau laporan formal berbahasa Indonesia (capaian, kontribusi anggota, rencana 7 hari, ide terpopuler, tautan dokumen) dengan aksi kirim email. |
-| **Generator Jadwal AI** | Membuat milestone mingguan dan tugas dari nama kompetisi, kategori, tema, dan deadline (berbasis templat, bukan LLM). |
+| **Cloud Vault** | Tab khusus untuk tautan folder dan berkas (guidebook, diagram, pitch deck, ZIP) di OneDrive Pro dan Google Drive, dengan filter penyimpanan dan validasi tautan. |
+| **Laporan Pembina** | Pratinjau laporan formal berbahasa Indonesia (capaian, kontribusi anggota, rencana 7 hari, ide terpopuler, tautan dokumen), tombol kirim, riwayat pengiriman, dan saklar Auto-Send setiap Minggu 19:00 WIB. Hanya Ketua yang dapat mengirim. Pengiriman di mode demo hanya simulasi. |
 | **Tema Terang/Gelap** | Default terang; pilihan tersimpan. Sidebar desktop dapat diciutkan, navigasi bawah di mobile. |
 
 ## Teknologi
@@ -34,13 +36,15 @@ npm install
 npm run dev
 ```
 
-Buka http://localhost:3000. Aplikasi langsung berjalan dengan data dummy; tidak perlu Supabase untuk mencoba UI.
+Buka http://localhost:3000 (atau port yang ditampilkan terminal). Aplikasi berjalan dengan data contoh; tidak perlu Supabase untuk mencoba UI. Menu profil → **Reset data demo** mengembalikan semuanya ke data awal.
 
 Cara mencoba alur utama:
 
-1. Klik **Aktifkan Alarm** di header. Alarm berbunyi untuk tugas "Finalisasi user flow & IA", lalu pilih **Konfirmasi Selesai** dan tempel tautan Google Drive/OneDrive. Suara berhenti dan skor kesiapan naik.
-2. Buka kompetisi **Hackathon Nasional AI** → tab **Whiteboard & Ideasi** → tekan **⚡ Jadikan Tugas** pada sebuah catatan.
-3. Buka **Laporan Pembina** di header kompetisi untuk pratinjau dan simulasi kirim.
+1. Pilih akun uji **Raka Pratama** di layar masuk. Lalu buka **Beranda** dan klik **Optimasi Jadwal Bentrok (AI Rescheduler)** pada Radar Bentrok.
+2. Klik **Aktifkan Alarm** di header. Alarm berbunyi untuk tugas "Finalisasi user flow & IA", lalu pilih **Konfirmasi Selesai** dan tempel tautan Google Drive/OneDrive. Suara berhenti dan skor kesiapan naik.
+3. Buka kompetisi **Hackathon Nasional AI** → tab **Whiteboard & Ideasi** → tekan **⚡ Jadikan Tugas** pada sebuah catatan.
+4. Buat lomba baru lewat **Buat Lomba Baru**, catat kode undangannya, **Keluar**, daftar akun baru, lalu **Gabung Lomba** dengan kode itu.
+5. Buka **Laporan Pembina** di header kompetisi untuk pratinjau dan simulasi kirim.
 
 Perintah lain: `npm run typecheck`, `npm run build`, `npm run start`.
 
@@ -61,14 +65,16 @@ lib/
   seed.ts / store.tsx           Data dummy dan state aplikasi
   report.ts / generator.ts      Pembuat laporan HTML dan jadwal AI
   integrations/                 Kalender, Supabase server, Realtime whiteboard
+  auth-and-sync.ts              Helper login Google/Microsoft (Supabase) dan sinkron tugas
 supabase/
   schema.sql                    Tabel inti, RLS, trigger skor kesiapan
   schema_phase2.sql             Whiteboard, Realtime, asal-usul tugas
+  schema_phase3.sql             Kode undangan, peran tim, Cloud Vault, fungsi join_competition
 ```
 
 ## Menyiapkan Supabase
 
-1. Di **SQL Editor** jalankan `supabase/schema.sql`, lalu `supabase/schema_phase2.sql`.
+1. Di **SQL Editor** jalankan berurutan: `supabase/schema.sql`, `supabase/schema_phase2.sql`, lalu `supabase/schema_phase3.sql`.
 2. Di **Authentication → Providers** aktifkan Google dan Azure (Microsoft) bila diperlukan.
 3. Salin Project URL, `anon` key, dan `service_role` key dari **Project Settings → API**.
 
@@ -83,7 +89,7 @@ Salin `.env.example` menjadi `.env.local` dan isi:
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Klien Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | Hanya server; membaca token OAuth dan menulis laporan. **Jangan pernah di-commit.** |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Calendar (scope `calendar.events`, `access_type=offline`) |
-| `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_TENANT_ID` | Microsoft Graph (`Calendars.ReadWrite offline_access`) |
+| `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_TENANT_ID` | Microsoft Graph (`Calendars.ReadWrite offline_access`). **Opsional**: banyak tenant kampus memblokir persetujuan aplikasi pihak ketiga. |
 | `RESEND_API_KEY`, `REPORT_FROM` | Pengiriman email laporan |
 | `CRON_SECRET` | Melindungi endpoint cron laporan mingguan |
 
@@ -93,7 +99,8 @@ Semua rute memerlukan header `Authorization: Bearer <access token Supabase>`.
 
 - `POST /api/sync-task` dengan `{ "taskId": "..." }` membuat atau memperbarui event di kalender penanggung jawab (popup + email di Google; satu popup di Outlook, karena Graph tidak mendukung pengingat email per event). Jika tugas sudah selesai, pengingat di kedua kalender dimatikan.
 - `POST /api/advisor-report` dengan `{ "competitionId": "...", "send": false }` mengembalikan pratinjau HTML. Dengan `send: true` (khusus Ketua) laporan dikirim ke `advisor_email` dan dicatat di `advisor_reports`.
-- `GET /api/advisor-report` dengan `Authorization: Bearer <CRON_SECRET>` mengirim laporan untuk semua kompetisi aktif (untuk cron mingguan).
+- `GET /api/advisor-report` dengan `Authorization: Bearer <CRON_SECRET>` mengirim laporan untuk kompetisi aktif yang menyalakan Auto-Send (`auto_send_weekly`). Jadwal cron: `0 12 * * 0` (Minggu 19:00 WIB).
+- `POST /api/auth/tokens` dengan `{ provider, refreshToken, email }` menyimpan refresh token penyedia milik pemanggil.
 
 ## Deploy ke Vercel
 
@@ -104,8 +111,8 @@ Semua rute memerlukan header `Authorization: Bearer <access token Supabase>`.
 
 ## Roadmap
 
-- [ ] Login Supabase Auth (Google dan Microsoft) dan penyimpanan token refresh
-- [ ] Ganti data dummy dengan query Supabase; panggil `/api/sync-task` dan `/api/advisor-report` dari UI
+- [ ] Sambungkan `LoginScreen` ke `lib/auth-and-sync.ts` (Supabase Auth Google/Microsoft) menggantikan akun demo
+- [ ] Ganti penyimpanan `localStorage` dengan query Supabase; panggil `/api/sync-task`, `/api/advisor-report`, dan `join_competition` dari UI
 - [ ] Sambungkan whiteboard ke Supabase Realtime (`lib/integrations/whiteboard-realtime.ts` sudah siap)
 - [ ] Service worker untuk notifikasi push saat aplikasi ditutup
 - [ ] Generator jadwal berbasis LLM

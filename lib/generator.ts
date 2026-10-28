@@ -25,6 +25,12 @@ const TEMPLATES: Record<string, Phase[]> = {
     { name: "Simulasi", tasks: ["Simulasi CTF 6 jam", "Evaluasi simulasi & perbaikan strategi"] },
     { name: "Hari-H", tasks: ["Cek kesiapan perangkat & akun", "Pengumpulan writeup resmi"] },
   ],
+  "Data Science": [
+    { name: "Pemahaman Data", tasks: ["Pemahaman masalah & metrik", "Pengumpulan dan pembersihan data", "Analisis data eksploratif (EDA)"] },
+    { name: "Pemodelan", tasks: ["Model baseline", "Rekayasa fitur", "Eksperimen & tuning model"] },
+    { name: "Evaluasi", tasks: ["Validasi silang & analisis error", "Interpretasi model", "Penyusunan visualisasi hasil"] },
+    { name: "Pelaporan & Pengumpulan", tasks: ["Laporan teknis", "Slide presentasi", "Pengumpulan notebook & prediksi final"] },
+  ],
   default: [
     { name: "Analisis Masalah", tasks: ["Riset pasar & industri", "Analisis SWOT & stakeholder", "Perumusan kerangka solusi"] },
     { name: "Perancangan Solusi", tasks: ["Model bisnis (BMC)", "Proyeksi keuangan", "Rencana implementasi"] },
@@ -35,6 +41,7 @@ const TEMPLATES: Record<string, Phase[]> = {
 
 function templateFor(category: string): Phase[] {
   const c = category.toLowerCase();
+  if (c.includes("data")) return TEMPLATES["Data Science"];
   if (c.includes("ui") || c.includes("ux") || c.includes("desain")) return TEMPLATES["UI/UX"];
   if (c.includes("ctf") || c.includes("cyber") || c.includes("security")) return TEMPLATES.CTF;
   if (c.includes("hack") || c.includes("ai") || c.includes("app")) return TEMPLATES.Hackathon;
@@ -51,6 +58,11 @@ export interface PlanInput {
   leaderId: string;
   memberIds: string[];
   now: number;
+  inviteCode: string;
+  onedriveFolderUrl?: string;
+  gdriveFolderUrl?: string;
+  /** Extra task titles pulled from a pasted guidebook (see extractGuidebookTasks). */
+  extraTasks?: string[];
 }
 
 export interface GeneratedPlan {
@@ -82,8 +94,11 @@ export function generatePlan(input: PlanInput, accentSeed: number): GeneratedPla
     submissionDeadline: new Date(deadline).toISOString(),
     advisorName: input.advisorName,
     advisorEmail: input.advisorEmail,
+    onedriveFolderUrl: input.onedriveFolderUrl || undefined,
+    gdriveFolderUrl: input.gdriveFolderUrl || undefined,
     status: "active",
     accent: ACCENTS[accentSeed % ACCENTS.length],
+    inviteCode: input.inviteCode,
   };
 
   const milestones: Milestone[] = [];
@@ -109,6 +124,7 @@ export function generatePlan(input: PlanInput, accentSeed: number): GeneratedPla
       if (!picks.includes(phase.tasks[idx])) picks.push(phase.tasks[idx]);
     }
     const isLast = w === weeks - 1;
+    if (w === 0) for (const extra of input.extraTasks ?? []) picks.push(extra);
     if (isLast) picks.push("Unggah berkas final ke panitia");
 
     picks.forEach((title, k) => {
@@ -130,4 +146,20 @@ export function generatePlan(input: PlanInput, accentSeed: number): GeneratedPla
   }
 
   return { competition, milestones, tasks };
+}
+
+/** Pulls actionable requirements (bullets / "wajib" lines) out of pasted guidebook text, at most 4. */
+export function extractGuidebookTasks(text: string): string[] {
+  const out: string[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const bullet = /^\s*([-*•]|\d+[.)])\s/.test(raw);
+    const line = raw.replace(/^[\s\-*•\d.)]+/, "").trim();
+    if (line.length < 8 || line.length > 90) continue;
+    if (bullet || /wajib|harus|dokumen|kumpul|submit|unggah|proposal|video/i.test(line)) {
+      const title = line.charAt(0).toUpperCase() + line.slice(1);
+      if (!out.includes(title)) out.push(title);
+    }
+    if (out.length === 4) break;
+  }
+  return out;
 }

@@ -56,6 +56,7 @@ export async function loadCompetitionData(db: SupabaseClient, competitionId: str
     gdriveFolderUrl: c.gdrive_folder_url ?? undefined,
     status: c.status,
     accent: "#2563EB",
+    inviteCode: c.invite_code ?? "",
   };
 
   const memberRows = (members.data ?? []) as Row[];
@@ -68,7 +69,7 @@ export async function loadCompetitionData(db: SupabaseClient, competitionId: str
       emailMicrosoft: m.users.email_microsoft ?? undefined,
       color: "#2563EB",
     })),
-    members: memberRows.map((m) => ({ competitionId: m.competition_id, userId: m.user_id, role: m.role as Role })),
+    members: memberRows.map((m) => ({ competitionId: m.competition_id, userId: m.user_id, role: m.role as Role, teamRole: m.team_role ?? undefined })),
     milestones: ((milestones.data ?? []) as Row[]).map((m) => ({
       id: m.id,
       competitionId: m.competition_id,
@@ -95,6 +96,8 @@ export async function loadCompetitionData(db: SupabaseClient, competitionId: str
     })),
     resources: [],
     reports: [],
+    notices: [],
+    session: null,
     whiteboard: ((board.data ?? []) as Row[]).map(
       (e): WhiteboardElement => ({
         id: e.id,
