@@ -11,6 +11,7 @@ import { useStore } from "@/lib/store";
 import type { Stage, Task } from "@/lib/types";
 import type { EvalContext } from "./modals/EvaluationModal";
 import CalendarPanel from "./CalendarPanel";
+import TeamPanel from "./TeamPanel";
 import CloudVault from "./CloudVault";
 import MilestoneFormModal, { type MilestoneFormCtx } from "./modals/MilestoneFormModal";
 import TaskFormModal, { type TaskFormCtx } from "./modals/TaskFormModal";
@@ -267,51 +268,7 @@ export default function Workspace({
       ) : (
       <div>
         <div className="space-y-5">
-          {/* Team */}
-          <section className="card p-4 sm:p-5" aria-labelledby="team-h">
-            <h2 id="team-h" className="mb-3 text-sm font-semibold">
-              Anggota Tim ({team.length}) &amp; Sinkronisasi Akun
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {team.map((m) => {
-                const u = userOf(m.userId)!;
-                const active = assignee === u.id;
-                return (
-                  <button
-                    key={u.id}
-                    onClick={() => setAssignee(active ? "all" : u.id)}
-                    className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition ${
-                      active ? "border-active bg-active/15" : "border-white/10 bg-white/[0.04] hover:bg-white/10"
-                    }`}
-                    aria-pressed={active}
-                  >
-                    <Avatar user={u} size={30} />
-                    <span>
-                      <span className="block text-xs font-medium leading-tight">
-                        {u.fullName.split(" ")[0]} {m.role === "leader" && <span className="text-warn">★</span>}
-                      </span>
-                      {m.teamRole && <span className="block text-[9px] leading-tight text-white/45">{m.teamRole}</span>}
-                      <span className="flex gap-1 pt-0.5">
-                        {u.emailGoogle && (
-                          <span className="rounded bg-white/10 px-1 text-[9px] text-white/70" title={u.emailGoogle}>
-                            Gmail ✓
-                          </span>
-                        )}
-                        {u.emailMicrosoft && (
-                          <span className="rounded bg-active/20 px-1 text-[9px] text-active" title={u.emailMicrosoft}>
-                            M365 ✓
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-              <div className="flex items-center gap-2 rounded-full border border-dashed border-white/15 px-3 py-1 text-xs text-white/50" title={comp.advisorEmail || undefined}>
-                <Mail size={13} /> Pembina: {comp.advisorName || comp.advisorEmail || "belum diisi"}
-              </div>
-            </div>
-          </section>
+          <TeamPanel competitionId={competitionId} assignee={assignee} onAssignee={setAssignee} onReport={onReport} />
 
           {comp.guide && <GuideCard guide={comp.guide} />}
 

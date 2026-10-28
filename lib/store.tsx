@@ -16,6 +16,8 @@ type Action =
   | { type: "addPlan"; competition: Competition; stages: Stage[]; members: Member[]; milestones: Milestone[]; tasks: Task[] }
   | { type: "decideStage"; stageId: string; work: { milestones: Milestone[]; tasks: Task[] } | null }
   | { type: "addTasks"; tasks: Task[] }
+  | { type: "setTeamRole"; competitionId: string; userId: string; teamRole: string }
+  | { type: "removeMember"; competitionId: string; userId: string }
   | { type: "addTask"; task: Task }
   | { type: "updateTask"; id: string; patch: Partial<Task> }
   | { type: "deleteTask"; id: string }
@@ -265,6 +267,37 @@ function reducer(state: AppData, action: Action): AppData {
         return { ...t, gcalEventId: u?.emailGoogle ? `gcal_${t.id}` : undefined, outlookEventId: u?.emailMicrosoft ? `outlook_${t.id}` : undefined };
       });
       return withNotice({ ...state, tasks }, `${n} penanda tugas disinkronkan ke Google Calendar dan Outlook anggota yang akunnya terhubung (simulasi, belum memakai akun sungguhan).`, "safe");
+    }
+
+    case "setTeamRole":
+      return {
+        ...state,
+        members: state.members.map((m) => (m.competitionId === action.competitionId && m.userId === action.userId ? { ...m, teamRole: action.teamRole } : m)),
+      };
+
+    case "removeMember": {
+      const member = state.members.find((m) => m.competitionId === action.competitionId && m.userId === action.userId);
+      const leader = state.members.find((m) => m.competitionId === action.competitionId && m.role === "leader");
+      if (!member || member.role === "leader" || !leader) return state;
+      const gone = state.users.find((u) => u.id === action.userId);
+      const heir = state.users.find((u) => u.id === leader.userId);
+      let moved = 0;
+      return withNotice(
+        {
+          ...state,
+          members: state.members.filter((m) => m !== member),
+          // Work of a removed member goes back to the leader so nothing is left without an owner.
+          tasks: state.tasks.map((t) => {
+            if (t.competitionId !== action.competitionId || t.assignedTo !== action.userId) return t;
+            if (!t.isCompleted) moved++;
+            return t.isCompleted
+              ? t
+              : { ...t, assignedTo: leader.userId, gcalEventId: heir?.emailGoogle ? `gcal_${t.id}` : undefined, outlookEventId: heir?.emailMicrosoft ? `outlook_${t.id}` : undefined };
+          }),
+        },
+        `${gone?.fullName ?? "Anggota"} dikeluarkan dari tim. ${moved} tugas terbuka dialihkan ke Ketua.`,
+        "warn",
+      );
     }
 
     case "addTasks":

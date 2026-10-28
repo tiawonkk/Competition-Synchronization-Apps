@@ -15,13 +15,11 @@ import {
   PRIORITY_LABEL,
   relative,
   scoreTone,
-  workloadPerDay,
   type RescheduleMove,
 } from "@/lib/logic";
 import { useStore } from "@/lib/store";
+import CompetitionCalendar from "./CompetitionCalendar";
 import { Avatar, Badge, Gauge, PRIORITY_TONE, TONE } from "./ui";
-
-const DAYS = 14;
 
 export default function Dashboard({
   onOpen,
@@ -63,16 +61,6 @@ export default function Dashboard({
     .filter((t) => t.assignedTo === me && !t.isCompleted && liveIds.has(t.competitionId))
     .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate));
   const urgentCount = myOpen.filter((t) => isAlarming(t, now)).length;
-
-  const start = useMemo(() => {
-    const d = new Date(now);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }, [now]);
-  const dayIndex = (iso: string) => Math.floor((new Date(iso).getTime() - start) / DAY);
-  const load = workloadPerDay(myTasks, now, DAYS);
-  const maxLoad = Math.max(1, ...load);
-  const collisionDays = new Set(collisions.flatMap((c) => c.items.map((i) => dayIndex(i.at))));
 
   if (myCompetitions.length === 0) {
     return (
@@ -246,69 +234,8 @@ export default function Dashboard({
         </div>
       </section>
 
-      {/* Cross-competition timeline */}
-      <section className="card p-4 sm:p-5" aria-labelledby="tl-h">
-        <h2 id="tl-h" className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <CalendarClock size={16} className="text-active" /> Timeline Lintas Kompetisi · 14 Hari
-        </h2>
-        <div className="overflow-x-auto">
-          <div className="min-w-[700px]">
-            <div className="grid gap-px" style={{ gridTemplateColumns: `130px repeat(${DAYS}, minmax(0,1fr))` }}>
-              <div />
-              {Array.from({ length: DAYS }, (_, i) => {
-                const d = new Date(start + i * DAY).toISOString();
-                return (
-                  <div
-                    key={i}
-                    className={`rounded-t-md px-1 pb-1 text-center text-[10px] leading-tight ${
-                      collisionDays.has(i) ? "bg-danger/15 text-danger" : i === 0 ? "text-active" : "text-white/40"
-                    }`}
-                  >
-                    {i === 0 ? "Hari ini" : fmtDate(d).replace(".", "")}
-                  </div>
-                );
-              })}
-
-              {/* workload heat row */}
-              <div className="flex items-center text-[11px] text-white/50">Beban kerja</div>
-              {load.map((v, i) => (
-                <div key={i} className={`flex h-8 items-end justify-center px-0.5 pb-0.5 ${collisionDays.has(i) ? "bg-danger/10" : ""}`}>
-                  <div
-                    className="w-full rounded-sm"
-                    style={{
-                      height: `${Math.max(4, (v / maxLoad) * 100)}%`,
-                      background: v >= 6 ? TONE.danger.hex : v >= 3 ? TONE.warn.hex : TONE.active.hex,
-                      opacity: v === 0 ? 0.15 : 0.85,
-                    }}
-                    title={`Bobot beban: ${v}`}
-                  />
-                </div>
-              ))}
-
-              {active.map((c) => (
-                <TimelineRow key={c.id} comp={c} dayIndex={dayIndex} collisionDays={collisionDays} />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/50">
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-danger" /> Kritis/Tinggi
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-active" /> Normal
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-safe" /> Selesai
-          </span>
-          <span className="flex items-center gap-1">
-            <Flag size={11} className="text-warn" /> Deadline final
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded-sm bg-danger/20" /> Hari bentrok
-          </span>
-        </div>
-      </section>
+      {/* Calendar across all my competitions */}
+      <CompetitionCalendar onComplete={onComplete} />
 
       {/* My urgent tasks */}
       <section className="card p-4 sm:p-5" aria-labelledby="my-h">
@@ -374,56 +301,5 @@ function Tile({ icon, label, value, bg }: { icon: React.ReactNode; label: string
       </div>
       <div className="mt-3 text-4xl font-extrabold tabular-nums">{value}</div>
     </div>
-  );
-}
-
-function TimelineRow({
-  comp,
-  dayIndex,
-  collisionDays,
-}: {
-  comp: ReturnType<typeof useStore>["data"]["competitions"][number];
-  dayIndex: (iso: string) => number;
-  collisionDays: Set<number>;
-}) {
-  const { data } = useStore();
-  const tasks = data.tasks.filter((t) => t.competitionId === comp.id);
-  const deadlineIdx = dayIndex(comp.submissionDeadline);
-  return (
-    <>
-      <div className="flex items-center gap-2 pr-2 text-xs font-medium">
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: comp.accent }} />
-        <span className="truncate" title={comp.title}>
-          {comp.title}
-        </span>
-      </div>
-      {Array.from({ length: DAYS }, (_, i) => {
-        const here = tasks.filter((t) => dayIndex(t.dueDate) === i);
-        const isDeadline = deadlineIdx === i;
-        return (
-          <div
-            key={i}
-            className={`flex min-h-[40px] flex-col items-center justify-center gap-0.5 border-l border-white/[0.04] py-1 ${
-              collisionDays.has(i) ? "bg-danger/10" : ""
-            }`}
-            title={[...here.map((t) => `${t.isCompleted ? "✓ " : ""}${t.title}`), isDeadline ? "Deadline final" : ""].filter(Boolean).join("\n")}
-          >
-            <div className="flex flex-wrap justify-center gap-0.5">
-              {here.slice(0, 4).map((t) => (
-                <span
-                  key={t.id}
-                  className="h-2 w-2 rounded-full"
-                  style={{
-                    background: t.isCompleted ? TONE.safe.hex : t.priority === "critical" || t.priority === "high" ? TONE.danger.hex : TONE.active.hex,
-                    boxShadow: t.isCompleted ? "none" : `0 0 6px ${t.priority === "critical" || t.priority === "high" ? TONE.danger.hex : TONE.active.hex}`,
-                  }}
-                />
-              ))}
-            </div>
-            {isDeadline && <Flag size={12} className="text-warn" />}
-          </div>
-        );
-      })}
-    </>
   );
 }
