@@ -1,5 +1,5 @@
 import { DAY, uid } from "./logic";
-import type { Competition, Milestone, Priority, Task } from "./types";
+import type { Competition, GuidebookDraft, Milestone, Priority, Task } from "./types";
 
 interface Phase {
   name: string;
@@ -162,4 +162,67 @@ export function extractGuidebookTasks(text: string): string[] {
     if (out.length === 4) break;
   }
   return out;
+}
+
+/**
+ * Plan driven by a guidebook: milestones are the stages the organiser published (registration, abstract, final...),
+ * and tasks are the requirements it lists. Without any usable dated stage it degrades to the generic plan
+ * plus the guidebook's requirements as extra tasks.
+ */
+export function generatePlanFromGuidebook(input: PlanInput, draft: GuidebookDraft, accentSeed: number): GeneratedPlan {
+  const deadline = new Date(input.deadline).getTime();
+  const minT = input.now + 3600_000;
+  const parse = (d: string | null) => (d ? new Date(`${d}T23:59:00`).getTime() : NaN);
+
+  const stages = draft.stages
+    .map((s) => ({ name: s.name, t: parse(s.date) }))
+    .filter((s) => Number.isFinite(s.t) && s.t >= minT && s.t <= deadline)
+    .sort((a, b) => a.t - b.t);
+
+  if (stages.length === 0) {
+    return generatePlan({ ...input, extraTasks: draft.tasks.map((t) => t.title).slice(0, 6) }, accentSeed);
+  }
+  if (stages[stages.length - 1].t < deadline - DAY) stages.push({ name: "Pengumpulan final", t: deadline });
+
+  const base = generatePlan(input, accentSeed);
+  const compId = base.competition.id;
+  const assignees = input.memberIds.length ? input.memberIds : [input.leaderId];
+  let rr = 0;
+
+  const milestones: Milestone[] = stages.map((s, i) => ({
+    id: uid("m"),
+    competitionId: compId,
+    title: s.name,
+    targetDate: new Date(s.t).toISOString(),
+    orderIndex: i,
+  }));
+  const clamp = (t: number) => Math.min(deadline, Math.max(minT + DAY, t));
+
+  const tasks: Task[] = [];
+  const add = (mi: number, title: string, description: string, due: number, priority: Priority) =>
+    tasks.push({
+      id: uid("t"),
+      competitionId: compId,
+      milestoneId: milestones[mi].id,
+      assignedTo: assignees[rr++ % assignees.length],
+      title,
+      description,
+      dueDate: new Date(due).toISOString(),
+      priority,
+      isCompleted: false,
+      alarmActive: true,
+    });
+
+  draft.tasks.forEach((t, k) => {
+    const dated = parse(t.dueDate);
+    const mi = Number.isFinite(dated) ? Math.max(0, stages.findIndex((s) => s.t >= dated)) : k % stages.length;
+    const target = stages[mi].t;
+    add(mi, t.title, t.description, clamp(Number.isFinite(dated) ? dated : target - 2 * DAY), t.priority);
+  });
+  // Every stage gets at least one task so no milestone is an empty shell.
+  milestones.forEach((m, i) => {
+    if (!tasks.some((t) => t.milestoneId === m.id)) add(i, `Siapkan: ${m.title}`, "Dibuat otomatis dari tahapan guidebook.", clamp(stages[i].t - 2 * DAY), i === milestones.length - 1 ? "critical" : "medium");
+  });
+
+  return { competition: base.competition, milestones, tasks };
 }

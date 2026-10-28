@@ -133,3 +133,12 @@ export interface Notice {
   text: string;
   tone: "safe" | "active" | "warn";
 }
+
+/** Structured timeline + requirements read out of a competition guidebook (PDF or pasted text). Dates are "YYYY-MM-DD". */
+export interface GuidebookDraft {
+  title?: string;
+  theme?: string;
+  deadline?: string; // final submission
+  stages: { name: string; date: string | null }[];
+  tasks: { title: string; description: string; dueDate: string | null; priority: Priority }[];
+}

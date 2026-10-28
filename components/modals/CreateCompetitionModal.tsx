@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, KeyRound, Loader2, Sparkles } from "lucide-react";
+import { Check, FileUp, KeyRound, Loader2, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { extractGuidebookTasks, generatePlan, type GeneratedPlan } from "@/lib/generator";
+import { extractGuidebookTasks, generatePlan, generatePlanFromGuidebook, type GeneratedPlan } from "@/lib/generator";
+import type { GuidebookDraft } from "@/lib/types";
 import { fmtDate, isValidProofUrl, makeInviteCode, PRIORITY_LABEL } from "@/lib/logic";
 import { isEmail } from "@/lib/passwords";
 import { TEAM_ROLES } from "@/lib/seed";
@@ -32,9 +33,16 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
   const [busy, setBusy] = useState(false);
   const [plan, setPlan] = useState<GeneratedPlan | null>(null);
   const [touched, setTouched] = useState(false);
+  const [draft, setDraft] = useState<GuidebookDraft | null>(null);
+  const [reading, setReading] = useState(false);
+  const [readError, setReadError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState("");
 
   useEffect(() => {
     if (open) {
+      setDraft(null);
+      setFileName("");
+      setReadError(null);
       setPlan(null);
       setTouched(false);
     }
@@ -50,13 +58,12 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
   };
   const valid = !Object.values(errors).some(Boolean);
 
-  function build(): GeneratedPlan {
-    return generatePlan(
-      {
-        title: title.trim(),
+  function build(d: GuidebookDraft | null = draft, dl = deadline, name = title, th = theme): GeneratedPlan {
+    const input = {
+        title: name.trim(),
         category,
-        theme: theme.trim(),
-        deadline: new Date(`${deadline}T23:59:00`).toISOString(),
+        theme: th.trim(),
+        deadline: new Date(`${dl}T23:59:00`).toISOString(),
         advisorName: advisorName.trim(),
         advisorEmail: advisorEmail.trim(),
         leaderId: me,
@@ -66,9 +73,41 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
         onedriveFolderUrl: onedrive.trim(),
         gdriveFolderUrl: gdrive.trim(),
         extraTasks: extractGuidebookTasks(guidebook),
-      },
-      data.competitions.length,
-    );
+      };
+    return d ? generatePlanFromGuidebook(input, d, data.competitions.length) : generatePlan(input, data.competitions.length);
+  }
+
+  /** Sends the PDF (or pasted text) to /api/guidebook, fills empty fields from the answer and previews the resulting plan. */
+  async function readGuidebook(file?: File) {
+    setReadError(null);
+    if (!file && guidebook.trim().length < 40) return setReadError("Unggah PDF atau tempel minimal beberapa baris teks guidebook.");
+    setReading(true);
+    try {
+      const body = new FormData();
+      if (file) body.append("file", file);
+      else body.append("text", guidebook);
+      const res = await fetch("/api/guidebook", { method: "POST", body });
+      const json = (await res.json().catch(() => ({}))) as { draft?: GuidebookDraft; error?: string };
+      if (!res.ok || !json.draft) return setReadError(json.error ?? "Gagal membaca guidebook.");
+      const d = json.draft;
+      const name = title.trim() || d.title || "";
+      const th = theme.trim() || d.theme || "";
+      const future = d.deadline && new Date(`${d.deadline}T23:59:00`).getTime() > now ? d.deadline : deadline;
+      setDraft(d);
+      if (!title.trim() && d.title) setTitle(d.title);
+      if (!theme.trim() && d.theme) setTheme(d.theme);
+      setDeadline(future);
+      if (!name) return setReadError("Guidebook terbaca, tapi nama lomba tidak ditemukan. Isi nama lomba lalu klik Auto-Generate.");
+      setPlan(build(d, future, name, th));
+    } catch {
+      setReadError("Tidak bisa menghubungi server. Periksa koneksi Anda.");
+    } finally {
+      setReading(false);
+    }
+  }
+
+  function dropTask(id: string) {
+    setPlan((p) => (p ? { ...p, tasks: p.tasks.filter((t) => t.id !== id) } : p));
   }
 
   function generate() {
@@ -94,6 +133,9 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
     setTitle("");
     setTheme("");
     setGuidebook("");
+    setDraft(null);
+    setFileName("");
+    setReadError(null);
     setOnedrive("");
     setGdrive("");
     setAdvisorName("");
@@ -162,16 +204,49 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="c-gb">Tempel aturan guidebook (opsional)</label>
+            <label className="label" htmlFor="c-gb">Guidebook lomba (opsional)</label>
+            <label className="btn-ghost w-full cursor-pointer !justify-start">
+              {reading ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
+              <span className="min-w-0 truncate">{fileName || "Unggah PDF guidebook (maks. 4 MB)"}</span>
+              <input
+                type="file"
+                accept="application/pdf"
+                className="sr-only"
+                disabled={reading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  setFileName(file.name);
+                  readGuidebook(file);
+                }}
+              />
+            </label>
             <textarea
               id="c-gb"
               rows={3}
-              className="field resize-y"
+              className="field mt-2 resize-y"
               value={guidebook}
               onChange={(e) => setGuidebook(e.target.value)}
-              placeholder={"- Proposal maksimal 15 halaman\n- Wajib unggah video demo 3 menit"}
+              placeholder={"Atau tempel teks guidebook di sini, mis.\n- Proposal maksimal 15 halaman\n- Wajib unggah video demo 3 menit"}
             />
-            <p className="mt-1 text-[11px] text-white/40">Kolom opsional bisa dilengkapi nanti lewat tombol Ubah Detail di halaman lomba. Poin-poin yang terdeteksi akan menjadi tugas di milestone pertama.</p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => readGuidebook()} disabled={reading || guidebook.trim().length < 40}>
+                <Sparkles size={14} className="text-active" /> Baca teks dengan AI
+              </button>
+              <span className="text-[11px] text-white/45">PDF/teks dikirim ke Google Gemini. Jangan unggah dokumen rahasia.</span>
+            </div>
+            {readError && (
+              <p role="alert" className="mt-2 rounded-xl bg-danger/10 px-3 py-2 text-xs text-danger">
+                {readError}
+              </p>
+            )}
+            {draft && !readError && (
+              <p role="status" className="mt-2 rounded-xl bg-safe/10 px-3 py-2 text-xs text-safe">
+                Terbaca: {draft.stages.length} tahapan dan {draft.tasks.length} tugas. Periksa pratinjau di kanan, hapus yang tidak perlu, lalu klik Buat Lomba.
+              </p>
+            )}
+            <p className="mt-1 text-[11px] text-white/40">Tanpa AI, poin-poin dari teks tempel tetap menjadi tugas di milestone pertama.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button className="btn-ghost flex-1" onClick={generate} disabled={busy}>
@@ -211,6 +286,9 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
                             <span className="min-w-0 flex-1 truncate">{t.title}</span>
                             <Badge tone={PRIORITY_TONE[t.priority]}>{PRIORITY_LABEL[t.priority]}</Badge>
                             <span className="text-[10px] text-white/40">{fmtDate(t.dueDate)}</span>
+                            <button type="button" onClick={() => dropTask(t.id)} className="rounded p-0.5 text-white/40 hover:bg-danger/15 hover:text-danger" aria-label={`Hapus tugas ${t.title}`}>
+                              <X size={13} />
+                            </button>
                           </li>
                         ))}
                     </ul>
