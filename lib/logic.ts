@@ -275,3 +275,21 @@ export const fmtWib = (d: Date) => `${wibFmt.format(d).replace(".", ":")} WIB`;
 
 /** The address a user signs in with (falls back to the calendar emails for server-loaded users). */
 export const userEmail = (u: { email?: string; emailMicrosoft?: string; emailGoogle?: string }) => u.email ?? u.emailMicrosoft ?? u.emailGoogle ?? "";
+
+/** ISO timestamp -> value for <input type="datetime-local"> in the user's local time. */
+export function toLocalInput(iso: string | number): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** datetime-local value -> ISO string, or null when empty or invalid. */
+export function fromLocalInput(v: string): string | null {
+  const t = new Date(v).getTime();
+  return v && Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+
+/** Local calendar day of a timestamp as "YYYY-MM-DD" (the key the calendar groups by). */
+export function dayKey(iso: string | number): string {
+  return toLocalInput(iso).slice(0, 10);
+}

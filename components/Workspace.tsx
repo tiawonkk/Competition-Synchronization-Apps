@@ -1,16 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BellRing, Calendar, CheckCircle2, ChevronRight, ExternalLink, Flag, KeyRound, Lock, Mail, Pencil, PlayCircle, Plus, Send, Volume2, XCircle, Zap } from "lucide-react";
+import { BellRing, Calendar, CalendarDays, CheckCircle2, ChevronRight, ExternalLink, FilterX, Flag, KeyRound, Lock, Mail, Pencil, PlayCircle, Plus, Send, Trash2, Volume2, XCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { OUTCOME_LABEL, STAGE_STATUS_LABEL } from "@/lib/evaluation";
 import { buildStageWork } from "@/lib/generator";
 import { generateStageUpdate } from "@/lib/report";
-import { DAY, fmtLong, uid, dueState, fmtDate, fmtDateTime, PRIORITY_LABEL, relative, scoreTone } from "@/lib/logic";
+import { DAY, dayKey, fmtLong, uid, dueState, fmtDate, fmtDateTime, PRIORITY_LABEL, relative, scoreTone } from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import type { Stage, Task } from "@/lib/types";
 import type { EvalContext } from "./modals/EvaluationModal";
+import CalendarPanel from "./CalendarPanel";
 import CloudVault from "./CloudVault";
+import MilestoneFormModal, { type MilestoneFormCtx } from "./modals/MilestoneFormModal";
+import TaskFormModal, { type TaskFormCtx } from "./modals/TaskFormModal";
 import { Avatar, Badge, Gauge, PRIORITY_TONE, TONE } from "./ui";
 import Whiteboard from "./Whiteboard";
 
@@ -37,6 +40,10 @@ export default function Workspace({
   const [tab, setTab] = useState<"tasks" | "board" | "vault">("tasks");
   const [copied, setCopied] = useState(false);
   const [stageSel, setStageSel] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<string | null>(null); // "YYYY-MM-DD" picked on the calendar
+  const [showCal, setShowCal] = useState(true);
+  const [taskForm, setTaskForm] = useState<TaskFormCtx | null>(null);
+  const [msForm, setMsForm] = useState<MilestoneFormCtx | null>(null);
 
   const comp = data.competitions.find((c) => c.id === competitionId)!;
   const team = data.members.filter((m) => m.competitionId === competitionId);
@@ -95,7 +102,17 @@ export default function Workspace({
     onEvaluate({ competitionId, stageId: activeStage.id, stageResult: "eliminated" });
   }
 
-  const visible = (t: Task) => (assignee === "all" || t.assignedTo === assignee) && (showDone || !t.isCompleted);
+  const visible = (t: Task) => (assignee === "all" || t.assignedTo === assignee) && (showDone || !t.isCompleted) && (!dateFilter || dayKey(t.dueDate) === dateFilter);
+  const canStructure = myRole === "leader" && !finished; // only the leader adds, moves or removes work (mirrors the database policies)
+
+  /** New task from the calendar: goes to the shown stage and to the milestone due on or after that day. */
+  function addTaskOn(day: string) {
+    const stage = sel && sel.status !== "upcoming" ? sel : activeStage;
+    if (!stage) return;
+    const ms = data.milestones.filter((m) => m.stageId === stage.id).sort((a, b) => a.orderIndex - b.orderIndex);
+    const target = ms.find((m) => dayKey(m.targetDate) >= day) ?? ms[ms.length - 1];
+    setTaskForm({ competitionId, stageId: stage.id, milestoneId: target?.id ?? null, defaultDue: new Date(`${day}T23:59:00`).toISOString() });
+  }
 
   return (
     <div className="space-y-5">
@@ -298,7 +315,9 @@ export default function Workspace({
 
           {comp.guide && <GuideCard guide={comp.guide} />}
 
-          {/* Milestones & tasks */}
+          {/* Milestones & tasks, with the calendar beside them */}
+          <div className={`grid gap-5 ${showCal ? "lg:grid-cols-[minmax(0,1fr)_21rem]" : ""}`}>
+          <div className="min-w-0">
           {sel?.status === "upcoming" ? (
             <LockedStage stage={sel} finished={finished} />
           ) : (
@@ -319,6 +338,9 @@ export default function Workspace({
                       </option>
                     ))}
                 </select>
+                <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setShowCal((v) => !v)} aria-pressed={showCal}>
+                  <CalendarDays size={14} /> {showCal ? "Sembunyikan Kalender" : "Tampilkan Kalender & Penanda"}
+                </button>
                 <label className="flex cursor-pointer items-center gap-1.5 text-xs text-white/60">
                   <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="accent-blue-500" />
                   Tampilkan selesai
@@ -326,6 +348,14 @@ export default function Workspace({
               </div>
             </div>
 
+            {dateFilter && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-active/10 px-3 py-2 text-xs text-active">
+                <span>Menampilkan pekerjaan tanggal {new Date(`${dateFilter}T12:00:00`).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}</span>
+                <button className="flex items-center gap-1 font-semibold hover:underline" onClick={() => setDateFilter(null)}>
+                  <FilterX size={12} /> Tampilkan Semua Tanggal
+                </button>
+              </div>
+            )}
             <div className="space-y-5">
               {selTasks.length === 0 && <p className="py-4 text-center text-xs text-white/40">Belum ada tugas di babak ini.</p>}
               {milestones.map((m) => {
@@ -333,6 +363,7 @@ export default function Workspace({
                 const mDone = mt.filter((t) => t.isCompleted).length;
                 const rows = mt.filter(visible).sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate));
                 if (rows.length === 0 && assignee !== "all") return null;
+                if (dateFilter && rows.length === 0 && dayKey(m.targetDate) !== dateFilter) return null;
                 return (
                   <div key={m.id}>
                     <div className="mb-2 flex items-center gap-3">
@@ -349,28 +380,64 @@ export default function Workspace({
                       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-white/10">
                         <motion.div className="h-full rounded-full bg-safe" initial={false} animate={{ width: `${mt.length ? (mDone / mt.length) * 100 : 0}%` }} />
                       </div>
+                      {canStructure && (
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            className="flex items-center gap-1 rounded-full bg-active/10 px-2.5 py-1 text-[11px] font-semibold text-active hover:bg-active/20"
+                            onClick={() => setTaskForm({ competitionId, stageId: sel!.id, milestoneId: m.id })}
+                          >
+                            <Plus size={12} /> Tambah Tugas
+                          </button>
+                          <button className="rounded-lg p-1.5 text-white/45 hover:bg-white/10 hover:text-white" onClick={() => setMsForm({ competitionId, stageId: sel!.id, milestoneId: m.id })} aria-label={`Edit milestone ${m.title}`}>
+                            <Pencil size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <ul className="space-y-2">
                       {rows.map((t) => (
-                        <TaskRow key={t.id} task={t} onComplete={onComplete} onTestAlarm={onTestAlarm} />
+                        <TaskRow key={t.id} task={t} onComplete={onComplete} onTestAlarm={onTestAlarm} readOnly={finished} onEditTask={(x) => setTaskForm({ competitionId, stageId: x.stageId ?? sel!.id, milestoneId: x.milestoneId, taskId: x.id })} />
                       ))}
-                      {rows.length === 0 && <li className="pl-9 text-xs text-white/30">Tidak ada tugas.</li>}
+                      {rows.length === 0 &&
+                        (canStructure && !dateFilter && assignee === "all" ? (
+                          <li className="pl-9">
+                            <button className="flex items-center gap-1.5 rounded-xl border border-dashed border-active/40 px-3 py-2 text-xs font-semibold text-active hover:bg-active/10" onClick={() => setTaskForm({ competitionId, stageId: sel!.id, milestoneId: m.id })}>
+                              <Plus size={13} /> Buat pekerjaan pertama di milestone ini
+                            </button>
+                          </li>
+                        ) : (
+                          <li className="pl-9 text-xs text-white/30">Tidak ada tugas.</li>
+                        ))}
                     </ul>
                   </div>
                 );
               })}
+              {canStructure && sel && (
+                <button className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 py-2.5 text-xs font-semibold text-white/60 hover:bg-white/[0.05] hover:text-white" onClick={() => setMsForm({ competitionId, stageId: sel.id })}>
+                  <Plus size={14} /> Tambah Milestone Baru
+                </button>
+              )}
             </div>
           </section>
           )}
+          </div>
+          {showCal && (
+            <div className="lg:sticky lg:top-4 lg:self-start">
+              <CalendarPanel competitionId={competitionId} selected={dateFilter} onSelect={setDateFilter} onAddTask={addTaskOn} canEdit={canStructure && !!(sel?.status !== "upcoming" ? sel : activeStage)} />
+            </div>
+          )}
+          </div>
         </div>
 
       </div>
       )}
+      <TaskFormModal ctx={taskForm} onClose={() => setTaskForm(null)} />
+      <MilestoneFormModal ctx={msForm} onClose={() => setMsForm(null)} />
     </div>
   );
 }
 
-function TaskRow({ task, onComplete, onTestAlarm }: { task: Task; onComplete: (id: string) => void; onTestAlarm: (id: string) => void }) {
+function TaskRow({ task, onComplete, onTestAlarm, onEditTask, readOnly }: { task: Task; onComplete: (id: string) => void; onTestAlarm: (id: string) => void; onEditTask: (t: Task) => void; readOnly: boolean }) {
   const { data, now, me, dispatch } = useStore();
   const team = data.members.filter((m) => m.competitionId === task.competitionId);
   const isLeader = team.some((m) => m.userId === me && m.role === "leader");
@@ -444,6 +511,25 @@ function TaskRow({ task, onComplete, onTestAlarm }: { task: Task; onComplete: (i
             {(mine || data.members.some((m) => m.competitionId === task.competitionId && m.userId === me && m.role === "leader")) && (
               <button className={hot ? "btn-danger !px-2.5 !py-1.5 text-xs" : "btn-safe !px-2.5 !py-1.5 text-xs"} onClick={() => onComplete(task.id)}>
                 <Send size={14} /> Selesai
+              </button>
+            )}
+          </div>
+        )}
+        {!readOnly && (isLeader || mine) && (
+          <div className="flex shrink-0 gap-0.5">
+            <button className="rounded-lg p-1.5 text-white/45 hover:bg-white/10 hover:text-white" onClick={() => onEditTask(task)} aria-label={`Edit tugas ${task.title}`} title="Edit tugas">
+              <Pencil size={15} />
+            </button>
+            {isLeader && (
+              <button
+                className="rounded-lg p-1.5 text-white/45 hover:bg-danger/15 hover:text-danger"
+                onClick={() => {
+                  if (window.confirm(`Hapus tugas "${task.title}"?`)) dispatch({ type: "deleteTask", id: task.id });
+                }}
+                aria-label={`Hapus tugas ${task.title}`}
+                title="Hapus tugas"
+              >
+                <Trash2 size={15} />
               </button>
             )}
           </div>

@@ -16,6 +16,13 @@ type Action =
   | { type: "addPlan"; competition: Competition; stages: Stage[]; members: Member[]; milestones: Milestone[]; tasks: Task[] }
   | { type: "decideStage"; stageId: string; work: { milestones: Milestone[]; tasks: Task[] } | null }
   | { type: "addTasks"; tasks: Task[] }
+  | { type: "addTask"; task: Task }
+  | { type: "updateTask"; id: string; patch: Partial<Task> }
+  | { type: "deleteTask"; id: string }
+  | { type: "addMilestone"; milestone: Milestone }
+  | { type: "updateMilestone"; id: string; patch: Partial<Milestone> }
+  | { type: "deleteMilestone"; id: string }
+  | { type: "syncCalendar"; competitionId: string }
   | { type: "addStage"; stage: Stage; afterStageId: string | null }
   | { type: "finishCompetition"; evaluation: Evaluation; stageId?: string; stageResult?: "passed" | "eliminated" }
   | { type: "saveEvaluation"; evaluation: Evaluation }
@@ -183,6 +190,81 @@ function reducer(state: AppData, action: Action): AppData {
           : `${stage.name} dinyatakan lolos.`,
         "safe",
       );
+    }
+
+    case "addTask": {
+      const user = state.users.find((u) => u.id === action.task.assignedTo);
+      const task: Task = {
+        ...action.task,
+        gcalEventId: user?.emailGoogle ? `gcal_${action.task.id}` : undefined,
+        outlookEventId: user?.emailMicrosoft ? `outlook_${action.task.id}` : undefined,
+      };
+      return withNotice({ ...state, tasks: [...state.tasks, task] }, `Tugas "${task.title}" dibuat untuk ${user?.fullName ?? "tim"} (${fmtDateTime(task.dueDate)}). Event dijadwalkan di ${calendars(user)}.`, "safe");
+    }
+
+    case "updateTask": {
+      const old = state.tasks.find((t) => t.id === action.id);
+      if (!old) return state;
+      const next: Task = { ...old, ...action.patch };
+      const moved = action.patch.dueDate !== undefined && action.patch.dueDate !== old.dueDate;
+      const reassigned = action.patch.assignedTo !== undefined && action.patch.assignedTo !== old.assignedTo;
+      if (moved) next.rescheduledFrom = undefined; // a manual edit replaces the AI's note
+      if (reassigned) {
+        const u = state.users.find((x) => x.id === next.assignedTo);
+        next.gcalEventId = u?.emailGoogle ? `gcal_${old.id}` : undefined;
+        next.outlookEventId = u?.emailMicrosoft ? `outlook_${old.id}` : undefined;
+      }
+      const updated: AppData = { ...state, tasks: state.tasks.map((t) => (t.id === old.id ? next : t)) };
+      return moved || reassigned ? withNotice(updated, `"${next.title}" diperbarui; event kalender mengikuti tenggat dan penanggung jawab baru.`) : updated;
+    }
+
+    case "deleteTask": {
+      const old = state.tasks.find((t) => t.id === action.id);
+      if (!old) return state;
+      return withNotice(
+        {
+          ...state,
+          tasks: state.tasks.filter((t) => t.id !== old.id),
+          whiteboard: state.whiteboard.map((e) => (e.taskId === old.id ? { ...e, taskId: undefined } : e)),
+        },
+        `Tugas "${old.title}" dihapus. Event kalender dan penanda dihapus, skor kesiapan dihitung ulang.`,
+        "warn",
+      );
+    }
+
+    case "addMilestone":
+      return withNotice({ ...state, milestones: [...state.milestones, action.milestone] }, `Milestone "${action.milestone.title}" ditambahkan.`, "safe");
+
+    case "updateMilestone":
+      return { ...state, milestones: state.milestones.map((m) => (m.id === action.id ? { ...m, ...action.patch } : m)) };
+
+    case "deleteMilestone": {
+      const old = state.milestones.find((m) => m.id === action.id);
+      if (!old) return state;
+      const gone = new Set(state.tasks.filter((t) => t.milestoneId === old.id).map((t) => t.id));
+      return withNotice(
+        {
+          ...state,
+          milestones: state.milestones
+            .filter((m) => m.id !== old.id)
+            .map((m) => (m.stageId === old.stageId && m.competitionId === old.competitionId && m.orderIndex > old.orderIndex ? { ...m, orderIndex: m.orderIndex - 1 } : m)),
+          tasks: state.tasks.filter((t) => !gone.has(t.id)),
+          whiteboard: state.whiteboard.map((e) => (e.taskId && gone.has(e.taskId) ? { ...e, taskId: undefined } : e)),
+        },
+        `Milestone "${old.title}" dihapus bersama ${gone.size} tugasnya.`,
+        "warn",
+      );
+    }
+
+    case "syncCalendar": {
+      let n = 0;
+      const tasks = state.tasks.map((t) => {
+        if (t.competitionId !== action.competitionId || t.isCompleted) return t;
+        const u = state.users.find((x) => x.id === t.assignedTo);
+        n++;
+        return { ...t, gcalEventId: u?.emailGoogle ? `gcal_${t.id}` : undefined, outlookEventId: u?.emailMicrosoft ? `outlook_${t.id}` : undefined };
+      });
+      return withNotice({ ...state, tasks }, `${n} penanda tugas disinkronkan ke Google Calendar dan Outlook anggota yang akunnya terhubung (simulasi, belum memakai akun sungguhan).`, "safe");
     }
 
     case "addTasks":

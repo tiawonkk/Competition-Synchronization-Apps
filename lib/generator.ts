@@ -133,7 +133,7 @@ export function buildStageWork({
   let steps: { title: string; t: number; phase?: number }[];
   if (marks.length) {
     steps = [...marks];
-    if (marks[marks.length - 1].t < end - DAY) steps.push({ title: `Pengumpulan ${stage.name}`, t: end });
+    if (marks[marks.length - 1].t < end - DAY) steps.push({ title: /^pengumpulan/i.test(stage.name) ? stage.name : `Pengumpulan ${stage.name}`, t: end });
   } else {
     const weeks = Math.min(6, Math.max(1, Math.ceil(span / (7 * DAY))));
     steps = Array.from({ length: weeks }, (_, w) => {
