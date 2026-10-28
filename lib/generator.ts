@@ -1,0 +1,133 @@
+import { DAY, uid } from "./logic";
+import type { Competition, Milestone, Priority, Task } from "./types";
+
+interface Phase {
+  name: string;
+  tasks: string[];
+}
+
+const TEMPLATES: Record<string, Phase[]> = {
+  "UI/UX": [
+    { name: "Riset & Empati", tasks: ["Wawancara calon pengguna", "Analisis kompetitor", "Persona & journey map"] },
+    { name: "Ideasi & Wireframe", tasks: ["Workshop ideasi (How Might We)", "Wireframe lo-fi", "Finalisasi user flow & IA"] },
+    { name: "Prototipe & Uji", tasks: ["Design system & komponen", "Prototipe hi-fi interaktif", "Usability testing"] },
+    { name: "Penyempurnaan & Pengumpulan", tasks: ["Revisi berdasarkan hasil uji", "Naskah proposal & video presentasi"] },
+  ],
+  Hackathon: [
+    { name: "Validasi Masalah & Data", tasks: ["Validasi masalah dengan calon pengguna", "Pengumpulan data / riset teknis", "Rancangan arsitektur sistem"] },
+    { name: "Pengembangan MVP", tasks: ["Implementasi fitur inti", "Integrasi API & basis data", "Pengujian fungsional"] },
+    { name: "Demo & Penyempurnaan", tasks: ["Deploy versi demo", "Polesan UI & penanganan kasus tepi", "Dokumentasi teknis"] },
+    { name: "Pitching & Pengumpulan", tasks: ["Deck pitch final", "Video demo", "Latihan pitching"] },
+  ],
+  CTF: [
+    { name: "Persiapan Lab", tasks: ["Setup lab latihan", "Pembagian peran kategori soal", "Template writeup"] },
+    { name: "Latihan Kategori", tasks: ["Latihan web exploitation", "Latihan kriptografi", "Latihan pwn & reverse engineering", "Latihan forensics"] },
+    { name: "Simulasi", tasks: ["Simulasi CTF 6 jam", "Evaluasi simulasi & perbaikan strategi"] },
+    { name: "Hari-H", tasks: ["Cek kesiapan perangkat & akun", "Pengumpulan writeup resmi"] },
+  ],
+  default: [
+    { name: "Analisis Masalah", tasks: ["Riset pasar & industri", "Analisis SWOT & stakeholder", "Perumusan kerangka solusi"] },
+    { name: "Perancangan Solusi", tasks: ["Model bisnis (BMC)", "Proyeksi keuangan", "Rencana implementasi"] },
+    { name: "Penyusunan Materi", tasks: ["Draf laporan lengkap", "Pembuatan slide presentasi", "Review internal dan advisor"] },
+    { name: "Presentasi & Pengumpulan", tasks: ["Latihan presentasi & tanya jawab", "Pengumpulan berkas final"] },
+  ],
+};
+
+function templateFor(category: string): Phase[] {
+  const c = category.toLowerCase();
+  if (c.includes("ui") || c.includes("ux") || c.includes("desain")) return TEMPLATES["UI/UX"];
+  if (c.includes("ctf") || c.includes("cyber") || c.includes("security")) return TEMPLATES.CTF;
+  if (c.includes("hack") || c.includes("ai") || c.includes("app")) return TEMPLATES.Hackathon;
+  return TEMPLATES.default;
+}
+
+export interface PlanInput {
+  title: string;
+  category: string;
+  theme: string;
+  deadline: string; // ISO
+  advisorName: string;
+  advisorEmail: string;
+  leaderId: string;
+  memberIds: string[];
+  now: number;
+}
+
+export interface GeneratedPlan {
+  competition: Competition;
+  milestones: Milestone[];
+  tasks: Task[];
+}
+
+const ACCENTS = ["#3B82F6", "#A855F7", "#EF4444", "#10B981", "#F59E0B", "#06B6D4"];
+
+/** Deterministic AI-style breakdown: weekly milestones + actionable tasks, assigned round-robin to the team. */
+export function generatePlan(input: PlanInput, accentSeed: number): GeneratedPlan {
+  const deadline = new Date(input.deadline).getTime();
+  const span = Math.max(DAY, deadline - input.now);
+  const weeks = Math.min(8, Math.max(2, Math.ceil(span / (7 * DAY))));
+  const weekMs = span / weeks;
+  const phases = templateFor(input.category);
+  const compId = uid("c");
+  const assignees = input.memberIds.length ? input.memberIds : [input.leaderId];
+  const pointers = phases.map(() => 0);
+  let rr = 0;
+
+  const competition: Competition = {
+    id: compId,
+    title: input.title,
+    category: input.category,
+    theme: input.theme,
+    startDate: new Date(input.now).toISOString(),
+    submissionDeadline: new Date(deadline).toISOString(),
+    advisorName: input.advisorName,
+    advisorEmail: input.advisorEmail,
+    status: "active",
+    accent: ACCENTS[accentSeed % ACCENTS.length],
+  };
+
+  const milestones: Milestone[] = [];
+  const tasks: Task[] = [];
+
+  for (let w = 0; w < weeks; w++) {
+    const pi = Math.min(phases.length - 1, Math.floor((w * phases.length) / weeks));
+    const phase = phases[pi];
+    const weekStart = input.now + w * weekMs;
+    const target = w === weeks - 1 ? deadline : weekStart + weekMs;
+    const mId = uid("m");
+    milestones.push({
+      id: mId,
+      competitionId: compId,
+      title: `Minggu ${w + 1}: ${phase.name}`,
+      targetDate: new Date(target).toISOString(),
+      orderIndex: w,
+    });
+
+    const picks: string[] = [];
+    for (let k = 0; k < 2; k++) {
+      const idx = pointers[pi]++ % phase.tasks.length;
+      if (!picks.includes(phase.tasks[idx])) picks.push(phase.tasks[idx]);
+    }
+    const isLast = w === weeks - 1;
+    if (isLast) picks.push("Unggah berkas final ke panitia");
+
+    picks.forEach((title, k) => {
+      const frac = isLast && k === picks.length - 1 ? 0.95 : 0.45 + 0.4 * (k / Math.max(1, picks.length - 1));
+      const priority: Priority = isLast ? "critical" : w >= weeks - 2 ? "high" : "medium";
+      tasks.push({
+        id: uid("t"),
+        competitionId: compId,
+        milestoneId: mId,
+        assignedTo: assignees[rr++ % assignees.length],
+        title,
+        description: k === 0 && w === 0 ? `Mengacu pada tema: ${input.theme || input.title}` : `Bagian dari ${phase.name}.`,
+        dueDate: new Date(Math.min(deadline, weekStart + weekMs * frac)).toISOString(),
+        priority,
+        isCompleted: false,
+        alarmActive: true,
+      });
+    });
+  }
+
+  return { competition, milestones, tasks };
+}

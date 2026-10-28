@@ -1,0 +1,10 @@
+{
+  "name": "CompeteSync",
+  "short_name": "CompeteSync",
+  "description": "Manajemen kompetisi, penjadwalan anti-keteteran, dan kolaborasi tim.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090D16",
+  "theme_color": "#090D16",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
