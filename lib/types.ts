@@ -144,6 +144,8 @@ export interface Notice {
 /** Structured timeline + requirements read out of a competition guidebook (PDF or pasted text). Dates are "YYYY-MM-DD". */
 export interface GuidebookDraft {
   title?: string;
+  category?: string; // one of the form's category options
+  summary?: string;
   theme?: string;
   deadline?: string; // final submission
   stages: { name: string; date: string | null; isRound?: boolean }[]; // isRound: an elimination round (babak), not just a date

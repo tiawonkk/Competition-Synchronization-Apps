@@ -29,6 +29,8 @@ const SCHEMA = {
   type: "OBJECT",
   properties: {
     title: { type: "STRING", nullable: true },
+    category: { type: "STRING", enum: ["Hackathon", "UI/UX Design", "CTF Cyber Security", "Business Case", "Data Science"] },
+    summary: { type: "STRING", nullable: true },
     theme: { type: "STRING", nullable: true },
     deadline: { type: "STRING", nullable: true },
     stages: {
@@ -60,7 +62,7 @@ function prompt(today: string) {
 Hari ini ${today}. Jika tahun tidak tertulis, pakai tahun terdekat yang masih akan datang.
 
 Keluarkan JSON saja:
-- title: nama lomba; theme: tema lomba (null jika tidak ada).
+- title: nama lomba; theme: tema lomba (null jika tidak ada); summary: ringkasan lomba 1 sampai 2 kalimat; category: pilih satu yang paling sesuai (Hackathon, UI/UX Design, CTF Cyber Security, Business Case, Data Science).
 - deadline: tanggal pengumpulan karya final peserta, format YYYY-MM-DD (null jika tidak ada).
 - stages: seluruh tahapan resmi berurutan waktu, tiap tahap dengan name singkat dan date YYYY-MM-DD (untuk rentang tanggal pakai tanggal akhirnya, null jika tidak jelas). Set isRound true untuk BABAK yang diikuti peserta dan bisa menggugurkan tim (kualifikasi/penyisihan, semifinal, final/grand final; date = tenggat atau hari pelaksanaan babak itu). Set isRound false untuk tonggak administratif (pendaftaran, pengumpulan abstrak, pengumuman hasil).
 - rubric: kriteria penilaian juri beserta bobotnya (mis. "Inovasi" "30%"). deliverables: format berkas yang wajib dikumpulkan (jenis, ukuran, jumlah halaman, durasi). rules: aturan penting lain (komposisi tim, larangan, syarat peserta). Masing-masing maksimal 12 butir singkat.
@@ -96,7 +98,9 @@ function sanitize(raw: unknown): GuidebookDraft {
     .slice(0, 12)
     .map((x: Record<string, unknown>) => ({ criterion: str(x?.criterion, 80), weight: str(x?.weight, 20) }))
     .filter((x) => x.criterion);
-  return { title: str(r.title, 120) || undefined, theme: str(r.theme, 160) || undefined, deadline: date(r.deadline) ?? undefined, stages, tasks, rubric, deliverables: list(r.deliverables, 140), rules: list(r.rules, 180) };
+  const CATEGORIES = ["Hackathon", "UI/UX Design", "CTF Cyber Security", "Business Case", "Data Science"];
+  const category = CATEGORIES.includes(str(r.category, 40)) ? str(r.category, 40) : undefined;
+  return { category, summary: str(r.summary, 300) || undefined, title: str(r.title, 120) || undefined, theme: str(r.theme, 160) || undefined, deadline: date(r.deadline) ?? undefined, stages, tasks, rubric, deliverables: list(r.deliverables, 140), rules: list(r.rules, 180) };
 }
 
 export async function POST(req: NextRequest) {

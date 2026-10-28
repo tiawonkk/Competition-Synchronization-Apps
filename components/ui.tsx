@@ -87,6 +87,7 @@ export function Modal({
   children,
   wide,
   locked,
+  footer,
 }: {
   open: boolean;
   onClose?: () => void;
@@ -95,6 +96,8 @@ export function Modal({
   wide?: boolean;
   /** locked modals can't be dismissed via backdrop/close button (used by the alarm) */
   locked?: boolean;
+  /** Pinned under the scrolling body (primary actions that must never scroll out of view). */
+  footer?: ReactNode;
 }) {
   return (
     <AnimatePresence>
@@ -111,7 +114,7 @@ export function Modal({
             aria-modal="true"
             aria-label={title}
             className={`card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-b-none bg-[var(--modal-bg)] shadow-2xl sm:rounded-3xl ${
-              wide ? "sm:max-w-3xl" : "sm:max-w-lg"
+              wide ? "sm:max-w-4xl" : "sm:max-w-lg"
             }`}
             initial={{ y: 40, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -129,7 +132,8 @@ export function Modal({
                 )}
               </div>
             )}
-            <div className="overflow-y-auto">{children}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+            {footer && <div className="shrink-0 border-t border-white/[0.08] bg-[rgb(var(--surface))] px-5 py-3.5">{footer}</div>}
           </motion.div>
         </motion.div>
       )}
