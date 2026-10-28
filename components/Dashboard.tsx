@@ -34,7 +34,8 @@ export default function Dashboard({
   onCreate: () => void;
   onJoin: () => void;
 }) {
-  const { data, now, me, myCompetitions, dispatch, readiness } = useStore();
+  // Finished competitions live in Riwayat; the dashboard only tracks the ones still running.
+  const { data, now, me, liveCompetitions: myCompetitions, dispatch, readiness } = useStore();
   const [optimizing, setOptimizing] = useState(false);
   const [outcome, setOutcome] = useState<{ moves: RescheduleMove[]; remaining: number } | null>(null);
   const active = myCompetitions.filter((c) => c.status === "active");
@@ -57,8 +58,9 @@ export default function Dashboard({
   }
   const compName = (id: string) => data.competitions.find((c) => c.id === id)!;
 
+  const liveIds = new Set(myCompetitions.map((c) => c.id));
   const myOpen = data.tasks
-    .filter((t) => t.assignedTo === me && !t.isCompleted)
+    .filter((t) => t.assignedTo === me && !t.isCompleted && liveIds.has(t.competitionId))
     .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate));
   const urgentCount = myOpen.filter((t) => isAlarming(t, now)).length;
 

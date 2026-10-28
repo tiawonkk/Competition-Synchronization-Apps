@@ -1,5 +1,7 @@
 import { computeReadiness, DAY, fmtDateTime, fmtLong, PRIORITY_LABEL } from "./logic";
+import { OUTCOME_LABEL, STAGE_STATUS_LABEL } from "./evaluation";
 import type { AppData } from "./seed";
+import type { Evaluation } from "./types";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -125,4 +127,85 @@ export function generateAdvisorReport(data: AppData, competitionId: string, now:
 </div>`.trim();
 
   return { weekNumber, subject: `[Laporan Progres Minggu ${weekNumber}] ${comp.title} - Skor Kesiapan ${readiness}%`, html };
+}
+
+/** Formal "Laporan Akhir Pertanggungjawaban Lomba" for the advisor: outcome, stage-by-stage journey, deliverables and team evaluation. */
+export function generateFinalReport(data: AppData, competitionId: string, ev: Evaluation, now: number): { subject: string; html: string } {
+  const comp = data.competitions.find((c) => c.id === competitionId)!;
+  const tasks = data.tasks.filter((t) => t.competitionId === competitionId);
+  const stages = data.stages.filter((s) => s.competitionId === competitionId).sort((a, b) => a.orderIndex - b.orderIndex);
+  const team = data.members.filter((m) => m.competitionId === competitionId && m.role !== "advisor");
+  const userName = (id: string | null) => data.users.find((u) => u.id === id)?.fullName ?? "Belum ditugaskan";
+
+  const th = "padding:8px 10px;text-align:left;background:#eef2f7;font-size:12px;color:#334155;border:1px solid #d5dde8;";
+  const td = "padding:8px 10px;font-size:13px;color:#0f172a;border:1px solid #d5dde8;vertical-align:top;";
+  const h2 = "font-size:15px;color:#0b1b34;margin:22px 0 8px;border-bottom:2px solid #1d4ed8;padding-bottom:4px;";
+  const para = (text: string) => (text.trim() ? `<p style="font-size:13px;margin:0 0 6px;white-space:pre-line;">${esc(text.trim())}</p>` : `<p style="font-size:13px;color:#64748b;margin:0;">&ndash;</p>`);
+  const link = (label: string, url?: string) => (url ? `<a href="${esc(url)}">${esc(label)}</a>` : "&ndash;");
+
+  const journey = stages
+    .map((s) => {
+      const st = tasks.filter((t) => t.stageId === s.id);
+      return `<tr><td style="${td}">${esc(s.name)}</td><td style="${td}">${STAGE_STATUS_LABEL[s.status]}</td><td style="${td}">${esc(fmtDateTime(s.deadline))}</td><td style="${td}">${st.filter((t) => t.isCompleted).length} dari ${st.length}</td></tr>`;
+    })
+    .join("");
+
+  const contribution = team
+    .map((m) => {
+      const mine = tasks.filter((t) => t.assignedTo === m.userId);
+      return `<tr><td style="${td}">${esc(userName(m.userId))}</td><td style="${td}">${m.role === "leader" ? "Ketua Tim" : "Anggota"}${m.teamRole ? ` &middot; ${esc(m.teamRole)}` : ""}</td><td style="${td}">${mine.filter((t) => t.isCompleted).length} dari ${mine.length}</td></tr>`;
+    })
+    .join("");
+
+  const html = `
+<div style="font-family:Segoe UI,Arial,sans-serif;max-width:680px;margin:0 auto;color:#0f172a;line-height:1.55;background:#ffffff;padding:24px;">
+  <p style="margin:0 0 4px;font-size:12px;color:#64748b;">${esc(fmtLong(now))}</p>
+  <h1 style="font-size:20px;margin:0 0 14px;color:#0b1b34;">Laporan Akhir Pertanggungjawaban Lomba &mdash; ${esc(comp.title)}</h1>
+  <p style="margin:0 0 10px;font-size:14px;">Yth. Bapak/Ibu <strong>${esc(comp.advisorName || "Pembina")}</strong>,</p>
+  <p style="margin:0 0 10px;font-size:14px;">Dengan hormat, kami menyampaikan laporan akhir keikutsertaan tim pada kompetisi <strong>${esc(comp.title)}</strong> (${esc(comp.category)}).</p>
+
+  <h2 style="${h2}">1. Hasil Akhir</h2>
+  <table style="border-collapse:collapse;width:100%;">
+    <tr><td style="${td}width:35%;">Capaian</td><td style="${td}"><strong>${esc(OUTCOME_LABEL[ev.outcome])}</strong></td></tr>
+    <tr><td style="${td}">Peringkat</td><td style="${td}">${esc(ev.rank || "–")}</td></tr>
+    <tr><td style="${td}">Skor akhir</td><td style="${td}">${esc(ev.score || "–")}</td></tr>
+    <tr><td style="${td}">Sertifikat</td><td style="${td}">${link("Tautan sertifikat", ev.certificateUrl)}</td></tr>
+    <tr><td style="${td}">Arsip karya final</td><td style="${td}">${link("Tautan arsip", ev.archiveUrl)}</td></tr>
+  </table>
+
+  <h2 style="${h2}">2. Perjalanan Antar Babak</h2>
+  <table style="border-collapse:collapse;width:100%;"><tr><th style="${th}">Babak</th><th style="${th}">Status</th><th style="${th}">Tenggat</th><th style="${th}">Tugas Selesai</th></tr>${journey}</table>
+
+  <h2 style="${h2}">3. Kontribusi Anggota Tim</h2>
+  <table style="border-collapse:collapse;width:100%;"><tr><th style="${th}">Nama</th><th style="${th}">Peran</th><th style="${th}">Tugas Selesai</th></tr>${contribution}</table>
+
+  <h2 style="${h2}">4. Evaluasi Tim</h2>
+  <p style="font-size:13px;margin:0 0 4px;"><strong>Hal yang berjalan baik</strong></p>${para(ev.wentWell)}
+  <p style="font-size:13px;margin:10px 0 4px;"><strong>Kendala dan hal yang kurang maksimal</strong></p>${para(ev.wentWrong)}
+  <p style="font-size:13px;margin:10px 0 4px;"><strong>Masukan juri dan pelajaran</strong></p>${para(ev.judgeFeedback)}
+  ${
+    ev.insights?.length
+      ? `<p style="font-size:13px;margin:10px 0 4px;"><strong>Rencana perbaikan untuk lomba berikutnya</strong></p><ul style="font-size:13px;padding-left:18px;margin:0;">${ev.insights.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`
+      : ""
+  }
+
+  <p style="margin:22px 0 4px;font-size:14px;">Atas bimbingan dan dukungan Bapak/Ibu selama proses lomba, kami mengucapkan terima kasih.</p>
+  <p style="margin:14px 0 0;font-size:14px;">Hormat kami,<br/><strong>Tim ${esc(comp.title)}</strong></p>
+  <p style="margin:18px 0 0;font-size:11px;color:#94a3b8;">Laporan ini dihasilkan otomatis oleh CompeteSync.</p>
+</div>`.trim();
+
+  return { subject: `[Laporan Akhir] ${comp.title} - ${OUTCOME_LABEL[ev.outcome]}`, html };
+}
+
+/** Short update for the advisor when the team advances to the next round. */
+export function generateStageUpdate(comp: { title: string; advisorName: string }, from: string, to: string, taskCount: number, now: number): { subject: string; html: string } {
+  const html = `
+<div style="font-family:Segoe UI,Arial,sans-serif;max-width:680px;margin:0 auto;color:#0f172a;line-height:1.55;background:#ffffff;padding:24px;">
+  <p style="margin:0 0 4px;font-size:12px;color:#64748b;">${esc(fmtLong(now))}</p>
+  <h1 style="font-size:20px;margin:0 0 14px;color:#0b1b34;">Kabar Baik &mdash; Lolos ke ${esc(to)}</h1>
+  <p style="margin:0 0 10px;font-size:14px;">Yth. Bapak/Ibu <strong>${esc(comp.advisorName || "Pembina")}</strong>,</p>
+  <p style="margin:0 0 10px;font-size:14px;">Tim kami dinyatakan <strong>lolos dari babak ${esc(from)}</strong> pada kompetisi <strong>${esc(comp.title)}</strong> dan kini memasuki <strong>${esc(to)}</strong>. Sebanyak ${taskCount} tugas baru sudah dijadwalkan untuk babak ini. Mohon doa dan arahan Bapak/Ibu.</p>
+  <p style="margin:14px 0 0;font-size:14px;">Hormat kami,<br/><strong>Tim ${esc(comp.title)}</strong></p>
+</div>`.trim();
+  return { subject: `[Lolos ke ${to}] ${comp.title}`, html };
 }

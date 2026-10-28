@@ -1,7 +1,7 @@
 export type Role = "leader" | "member" | "advisor";
 export type Priority = "low" | "medium" | "high" | "critical";
 export type CompetitionStatus = "planning" | "active" | "submitted" | "archived";
-export type Provider = "onedrive" | "gdrive";
+export type Provider = "onedrive" | "gdrive" | "supabase";
 export type ResourceKind = "guidebook" | "diagram" | "deck" | "zip" | "other";
 
 export interface User {
@@ -30,6 +30,7 @@ export interface Competition {
   accent: string; // UI accent color
   inviteCode: string; // e.g. "HACK-88"; teammates join with it
   autoSendWeekly?: boolean; // auto-send the advisor report every Sunday 19:00 WIB
+  guide?: GuideInfo; // rubric, deliverables and rules read from the guidebook
 }
 
 export interface Member {
@@ -45,6 +46,7 @@ export interface Milestone {
   title: string;
   targetDate: string;
   orderIndex: number;
+  stageId?: string;
 }
 
 export interface Task {
@@ -64,6 +66,7 @@ export interface Task {
   alarmActive: boolean;
   sourceNoteId?: string;
   rescheduledFrom?: string; // ISO due date before the AI rescheduler moved it
+  stageId?: string;
 }
 
 export interface Resource {
@@ -72,9 +75,12 @@ export interface Resource {
   kind: ResourceKind;
   title: string;
   provider: Provider;
-  url: string;
+  url: string; // empty for a demo upload that has no cloud copy yet
   meta: string;
   addedBy?: string;
+  sizeBytes?: number;
+  chunks?: number; // number of upload chunks (large-file uploader)
+  simulated?: boolean; // metadata only: the bytes were never sent anywhere
 }
 
 export interface AdvisorReport {
@@ -85,6 +91,7 @@ export interface AdvisorReport {
   sentToEmail: string;
   sentAt: string;
   status: "draft" | "queued" | "sent" | "failed";
+  kind?: "weekly" | "stage" | "final"; // absent = weekly
 }
 
 export type DueState = "done" | "overdue" | "urgent" | "soon" | "ok";
@@ -139,6 +146,59 @@ export interface GuidebookDraft {
   title?: string;
   theme?: string;
   deadline?: string; // final submission
-  stages: { name: string; date: string | null }[];
+  stages: { name: string; date: string | null; isRound?: boolean }[]; // isRound: an elimination round (babak), not just a date
+  rubric?: { criterion: string; weight: string }[];
+  deliverables?: string[];
+  rules?: string[];
   tasks: { title: string; description: string; dueDate: string | null; priority: Priority }[];
+}
+
+// ---------- Multi-stage pipeline & post-mortem ----------
+export type StageStatus = "upcoming" | "active" | "passed" | "eliminated";
+
+export interface PlannedTask {
+  title: string;
+  description: string;
+  dueDate: string | null; // "YYYY-MM-DD"
+  priority: Priority;
+}
+
+/** Work for a stage that is still locked; it becomes real milestones and tasks when the team advances to it. */
+export interface StagePlan {
+  marks: { name: string; date: string }[];
+  tasks: PlannedTask[];
+}
+
+export interface Stage {
+  id: string;
+  competitionId: string;
+  name: string; // "Penyisihan", "Semifinal", "Grand Final", or a custom round
+  orderIndex: number;
+  status: StageStatus;
+  deadline: string; // ISO: submission deadline of this round
+  plan?: StagePlan;
+  decidedAt?: string;
+}
+
+export type OutcomeTier = "juara1" | "juara2" | "juara3" | "harapan" | "finalis" | "gugur_semifinal" | "gugur_kualifikasi";
+
+export interface Evaluation {
+  id: string;
+  competitionId: string;
+  outcome: OutcomeTier;
+  rank: string; // free text, e.g. "Rank 2 dari 150 tim"
+  score: string; // free text, e.g. "92,4"
+  certificateUrl?: string;
+  archiveUrl?: string;
+  wentWell: string;
+  wentWrong: string;
+  judgeFeedback: string;
+  insights?: string[]; // output of the automatic post-mortem analysis
+  completedAt: string;
+}
+
+export interface GuideInfo {
+  rubric: { criterion: string; weight: string }[];
+  deliverables: string[];
+  rules: string[];
 }

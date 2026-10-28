@@ -1,11 +1,13 @@
 "use client";
 
-import { ExternalLink, FileArchive, FileText, FolderOpen, Network, Plus, Presentation } from "lucide-react";
+import { CloudUpload, ExternalLink, FileArchive, FileText, FolderOpen, Network, Plus, Presentation, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { isValidProofUrl, uid } from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import type { Provider, ResourceKind } from "@/lib/types";
-import { Modal } from "./ui";
+import GuidebookReaderModal from "./modals/GuidebookReaderModal";
+import LargeUploadModal from "./modals/LargeUploadModal";
+import { Badge, Modal } from "./ui";
 
 const KIND_ICON: Record<ResourceKind, typeof FileText> = {
   guidebook: FileText,
@@ -16,13 +18,19 @@ const KIND_ICON: Record<ResourceKind, typeof FileText> = {
 };
 const KIND_LABEL: Record<ResourceKind, string> = { guidebook: "Guidebook (PDF)", diagram: "Diagram / Desain", deck: "Pitch Deck", zip: "Source Code / ZIP", other: "Lainnya" };
 
+const PROVIDER_LABEL: Record<Provider, string> = { onedrive: "OneDrive Pro", gdrive: "Google Drive", supabase: "Supabase Storage" };
+const PROVIDER_STYLE: Record<Provider, string> = { onedrive: "bg-active/15 text-active", gdrive: "bg-safe/15 text-safe", supabase: "bg-warn/15 text-warn" };
+
 type Filter = "all" | Provider;
 
 /** Cloud Vault tab: shared folders plus a filterable file list backed by OneDrive Pro and Google Drive links. */
 export default function CloudVault({ competitionId }: { competitionId: string }) {
-  const { data } = useStore();
+  const { data, me } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
   const [adding, setAdding] = useState(false);
+  const [bigOpen, setBigOpen] = useState(false);
+  const [readerOpen, setReaderOpen] = useState(false);
+  const isLeader = data.members.some((m) => m.competitionId === competitionId && m.userId === me && m.role === "leader");
   const comp = data.competitions.find((c) => c.id === competitionId)!;
   const all = data.resources.filter((r) => r.competitionId === competitionId);
   const files = all.filter((r) => filter === "all" || r.provider === filter);
@@ -34,9 +42,19 @@ export default function CloudVault({ competitionId }: { competitionId: string })
         <h2 id="vault-h" className="text-sm font-semibold">
           Cloud Vault
         </h2>
-        <button className="btn-primary !py-1.5 text-xs" onClick={() => setAdding(true)}>
-          <Plus size={15} /> Unggah / Tambah Link Berkas
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {isLeader && (
+            <button className="btn-ghost !py-1.5 text-xs" onClick={() => setReaderOpen(true)}>
+              <Sparkles size={15} className="text-active" /> Baca Guidebook (AI)
+            </button>
+          )}
+          <button className="btn-ghost !py-1.5 text-xs" onClick={() => setBigOpen(true)}>
+            <CloudUpload size={15} /> Unggah Berkas Besar
+          </button>
+          <button className="btn-primary !py-1.5 text-xs" onClick={() => setAdding(true)}>
+            <Plus size={15} /> Tambah Link Berkas
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
@@ -50,6 +68,7 @@ export default function CloudVault({ competitionId }: { competitionId: string })
             ["all", `Semua (${all.length})`],
             ["onedrive", `OneDrive (${count("onedrive")})`],
             ["gdrive", `Google Drive (${count("gdrive")})`],
+            ["supabase", `Supabase (${count("supabase")})`],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -70,19 +89,19 @@ export default function CloudVault({ competitionId }: { competitionId: string })
           const adder = data.users.find((u) => u.id === r.addedBy);
           return (
             <li key={r.id}>
-              <a href={r.url} target="_blank" rel="noreferrer" className="group flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-white/[0.06]">
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${r.provider === "onedrive" ? "bg-active/15 text-active" : "bg-safe/15 text-safe"}`}>
+              <RowLink url={r.url}>
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${PROVIDER_STYLE[r.provider]}`}>
                   <Icon size={17} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{r.title}</span>
                   <span className="text-[11px] text-white/45">
-                    {r.provider === "onedrive" ? "OneDrive Pro" : "Google Drive"} · {r.meta}
+                    {PROVIDER_LABEL[r.provider]} · {r.meta}
                     {adder ? ` · oleh ${adder.fullName.split(" ")[0]}` : ""}
                   </span>
                 </span>
-                <ExternalLink size={14} className="text-white/20 group-hover:text-white/70" />
-              </a>
+                {r.simulated ? <Badge tone="warn">Simulasi</Badge> : <ExternalLink size={14} className="text-white/20 group-hover:text-white/70" />}
+              </RowLink>
             </li>
           );
         })}
@@ -90,7 +109,21 @@ export default function CloudVault({ competitionId }: { competitionId: string })
       </ul>
 
       <AddFileModal open={adding} competitionId={competitionId} onClose={() => setAdding(false)} />
+      <LargeUploadModal open={bigOpen} competitionId={competitionId} onClose={() => setBigOpen(false)} />
+      <GuidebookReaderModal open={readerOpen} competitionId={competitionId} onClose={() => setReaderOpen(false)} />
     </section>
+  );
+}
+
+/** A vault row: a link when the file has a cloud URL, a plain row for demo uploads that have none. */
+function RowLink({ url, children }: { url: string; children: React.ReactNode }) {
+  const cls = "group flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-white/[0.06]";
+  return url ? (
+    <a href={url} target="_blank" rel="noreferrer" className={cls}>
+      {children}
+    </a>
+  ) : (
+    <div className={cls}>{children}</div>
   );
 }
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { Check, FileUp, KeyRound, Loader2, Sparkles, X } from "lucide-react";
+import { Check, FileUp, KeyRound, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { extractGuidebookTasks, generatePlan, generatePlanFromGuidebook, type GeneratedPlan } from "@/lib/generator";
+import { defaultStageSpecs, extractGuidebookTasks, generatePlan, type GeneratedPlan } from "@/lib/generator";
 import type { GuidebookDraft } from "@/lib/types";
-import { extractPdfText } from "@/lib/pdf-text";
+import { analyzeGuidebook } from "@/lib/guidebook-client";
 import { fmtDate, isValidProofUrl, makeInviteCode, PRIORITY_LABEL } from "@/lib/logic";
 import { isEmail } from "@/lib/passwords";
 import { TEAM_ROLES } from "@/lib/seed";
@@ -17,6 +17,17 @@ function defaultDeadline(now: number) {
   const d = new Date(now + 21 * 86400_000);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const localDay = (iso: string | number) => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+interface Row {
+  name: string;
+  date: string; // YYYY-MM-DD
 }
 
 export default function CreateCompetitionModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
@@ -38,9 +49,44 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
   const [reading, setReading] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
+  const [progress, setProgress] = useState<{ label: string; pct: number | null } | null>(null);
+
+  const rowsFor = (dl: string): Row[] => defaultStageSpecs(now, new Date(`${dl}T23:59:00`).getTime()).map((s) => ({ name: s.name, date: localDay(s.deadline) }));
+  const [rows, setRows] = useState<Row[]>(() => rowsFor(defaultDeadline(now)));
+  const [rowsTouched, setRowsTouched] = useState(false);
+  // The last round always ends on the main deadline, so its date is derived rather than edited.
+  const effRows = rows.map((r, i) => (i === rows.length - 1 ? { ...r, date: deadline } : r));
+
+  function changeDeadline(v: string) {
+    setDeadline(v);
+    setPlan(null);
+    if (!rowsTouched && v) setRows(rowsFor(v));
+  }
+  function editRow(i: number, patch: Partial<Row>) {
+    setRows((p) => p.map((r, k) => (k === i ? { ...r, ...patch } : r)));
+    setRowsTouched(true);
+    setPlan(null);
+  }
+  function addRow() {
+    setRows((p) => {
+      const prev = p.length > 1 ? effRows[p.length - 2].date : localDay(now + 86400_000);
+      const mid = localDay((new Date(`${prev}T12:00:00`).getTime() + new Date(`${deadline}T12:00:00`).getTime()) / 2);
+      return [...p.slice(0, -1), { name: "Babak baru", date: mid }, p[p.length - 1]];
+    });
+    setRowsTouched(true);
+    setPlan(null);
+  }
+  function removeRow(i: number) {
+    setRows((p) => (p.length > 1 ? p.filter((_, k) => k !== i) : p));
+    setRowsTouched(true);
+    setPlan(null);
+  }
 
   useEffect(() => {
     if (open) {
+      setRows(rowsFor(deadline));
+      setRowsTouched(false);
+      setProgress(null);
       setDraft(null);
       setFileName("");
       setReadError(null);
@@ -49,17 +95,29 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
     }
   }, [open]);
 
+  function stageError(): string | false {
+    if (effRows.some((r) => !r.name.trim())) return "Nama setiap babak wajib diisi.";
+    let prev = now;
+    for (let i = 0; i < effRows.length - 1; i++) {
+      const t = new Date(`${effRows[i].date}T23:59:00`).getTime();
+      if (!Number.isFinite(t) || t <= prev) return "Tenggat babak harus berurutan dan di masa depan.";
+      prev = t;
+    }
+    return new Date(`${deadline}T23:59:00`).getTime() > prev ? false : "Tenggat babak terakhir harus setelah babak sebelumnya.";
+  }
+
   const taken = useMemo(() => data.competitions.map((c) => c.inviteCode), [data.competitions]);
   const errors = {
     title: !title.trim() && "Nama lomba wajib diisi.",
     deadline: (!deadline || new Date(`${deadline}T23:59:00`).getTime() <= now) && "Pilih tanggal di masa depan.",
+    stages: stageError(),
     advisorEmail: advisorEmail.trim() && !isEmail(advisorEmail.trim()) && "Format email belum valid.",
     onedrive: onedrive.trim() && !isValidProofUrl(onedrive) && "Gunakan tautan https dari OneDrive, SharePoint, atau domain Binus.",
     gdrive: gdrive.trim() && !isValidProofUrl(gdrive) && "Gunakan tautan https dari Google Drive.",
   };
   const valid = !Object.values(errors).some(Boolean);
 
-  function build(d: GuidebookDraft | null = draft, dl = deadline, name = title, th = theme): GeneratedPlan {
+  function build(d: GuidebookDraft | null = draft, dl = deadline, name = title, th = theme, rs: Row[] = effRows): GeneratedPlan {
     const input = {
         title: name.trim(),
         category,
@@ -74,43 +132,39 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
         onedriveFolderUrl: onedrive.trim(),
         gdriveFolderUrl: gdrive.trim(),
         extraTasks: extractGuidebookTasks(guidebook),
+        stages: rs.map((r) => ({ name: r.name.trim(), deadline: new Date(`${r.date}T23:59:00`).toISOString() })),
       };
-    return d ? generatePlanFromGuidebook(input, d, data.competitions.length) : generatePlan(input, data.competitions.length);
+    return generatePlan(input, data.competitions.length, d);
   }
 
-  /** Sends the PDF (or pasted text) to /api/guidebook, fills empty fields from the answer and previews the resulting plan. */
+  /** Reads the PDF (or pasted text) with AI, fills empty fields from the answer and previews the resulting plan. */
   async function readGuidebook(file?: File) {
     setReadError(null);
-    if (!file && guidebook.trim().length < 40) return setReadError("Unggah PDF atau tempel minimal beberapa baris teks guidebook.");
     setReading(true);
-    try {
-      const body = new FormData();
-      if (file) {
-        // Prefer the PDF's own text (small, no size limit); only send the file itself when it is a scan without text.
-        const text = await extractPdfText(file).catch(() => "");
-        if (text.length >= 200) body.append("text", text);
-        else if (file.size <= 4 * 1024 * 1024) body.append("file", file);
-        else return setReadError("PDF ini berupa gambar/scan dan lebih dari 4 MB. Kompres PDF-nya, atau tempel teks guidebook secara manual.");
-      } else body.append("text", guidebook);
-      const res = await fetch("/api/guidebook", { method: "POST", body });
-      const json = (await res.json().catch(() => ({}))) as { draft?: GuidebookDraft; error?: string };
-      if (res.status === 413) return setReadError("Berkas terlalu besar untuk dikirim. Tempel teks guidebook secara manual.");
-      if (!res.ok || !json.draft) return setReadError(json.error ?? "Gagal membaca guidebook.");
-      const d = json.draft;
-      const name = title.trim() || d.title || "";
-      const th = theme.trim() || d.theme || "";
-      const future = d.deadline && new Date(`${d.deadline}T23:59:00`).getTime() > now ? d.deadline : deadline;
-      setDraft(d);
-      if (!title.trim() && d.title) setTitle(d.title);
-      if (!theme.trim() && d.theme) setTheme(d.theme);
-      setDeadline(future);
-      if (!name) return setReadError("Guidebook terbaca, tapi nama lomba tidak ditemukan. Isi nama lomba lalu klik Auto-Generate.");
-      setPlan(build(d, future, name, th));
-    } catch {
-      setReadError("Tidak bisa menghubungi server. Periksa koneksi Anda.");
-    } finally {
-      setReading(false);
+    const { draft: d, error, note } = await analyzeGuidebook({ file, text: guidebook, onProgress: setProgress });
+    setReading(false);
+    setProgress(null);
+    if (!d) return setReadError(error ?? "Gagal membaca guidebook.");
+
+    const name = title.trim() || d.title || "";
+    const th = theme.trim() || d.theme || "";
+    const dated = (v: string | null | undefined) => (v && new Date(`${v}T23:59:00`).getTime() > now ? v : null);
+    const rounds = d.stages.filter((st) => st.isRound && dated(st.date)).sort((x, y) => x.date!.localeCompare(y.date!));
+    const lastRound = rounds.length ? rounds[rounds.length - 1].date! : null;
+    const future = [dated(d.deadline), lastRound].filter((x): x is string => !!x).sort().pop() ?? deadline;
+    // Rounds named by the guidebook replace the default Penyisihan / Semifinal / Grand Final rows.
+    const nextRows = rounds.length ? rounds.map((r) => ({ name: r.name, date: r.date! })) : effRows;
+    if (rounds.length) {
+      setRows(nextRows);
+      setRowsTouched(true);
     }
+    setDraft(d);
+    if (!title.trim() && d.title) setTitle(d.title);
+    if (!theme.trim() && d.theme) setTheme(d.theme);
+    setDeadline(future);
+    if (!name) return setReadError("Guidebook terbaca, tapi nama lomba tidak ditemukan. Isi nama lomba lalu klik Auto-Generate.");
+    setPlan(build(d, future, name, th, nextRows.map((r, i) => (i === nextRows.length - 1 ? { ...r, date: future } : r))));
+    if (note) setReadError(note);
   }
 
   function dropTask(id: string) {
@@ -172,10 +226,41 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
               </select>
             </div>
             <div>
-              <label className="label" htmlFor="c-dl">Deadline utama</label>
-              <input id="c-dl" type="date" className="field" value={deadline} min={new Date(now + 86400_000).toISOString().slice(0, 10)} onChange={(e) => setDeadline(e.target.value)} />
+              <label className="label" htmlFor="c-dl">Deadline final</label>
+              <input id="c-dl" type="date" className="field" value={deadline} min={new Date(now + 86400_000).toISOString().slice(0, 10)} onChange={(e) => changeDeadline(e.target.value)} />
               {err("deadline")}
             </div>
+          </div>
+          <div>
+            <span className="label">Babak lomba</span>
+            <ol className="space-y-1.5">
+              {effRows.map((r, i) => {
+                const last = i === effRows.length - 1;
+                return (
+                  <li key={i} className="flex items-center gap-1.5">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-active/15 text-xs font-bold text-active">{i + 1}</span>
+                    <input className="field !py-1.5" value={r.name} onChange={(e) => editRow(i, { name: e.target.value })} aria-label={`Nama babak ${i + 1}`} />
+                    <input
+                      type="date"
+                      className="field !w-40 shrink-0 !py-1.5"
+                      value={r.date}
+                      disabled={last}
+                      title={last ? "Mengikuti deadline final" : undefined}
+                      onChange={(e) => editRow(i, { date: e.target.value })}
+                      aria-label={`Tenggat babak ${i + 1}`}
+                    />
+                    <button type="button" onClick={() => removeRow(i)} disabled={effRows.length === 1} className="rounded-lg p-1.5 text-white/40 hover:bg-danger/15 hover:text-danger disabled:opacity-30" aria-label={`Hapus babak ${i + 1}`}>
+                      <Trash2 size={15} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+            <button type="button" className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-active hover:underline" onClick={addRow}>
+              <Plus size={13} /> Tambah babak (mis. Pra-Kualifikasi, Bootcamp)
+            </button>
+            {err("stages")}
+            <p className="mt-1 text-[11px] text-white/40">Hanya babak pertama yang dijadwalkan sekarang. Babak berikutnya terbuka saat tim dinyatakan lolos.</p>
           </div>
           <div>
             <label className="label" htmlFor="c-theme">Tema (opsional)</label>
@@ -229,6 +314,17 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
                 }}
               />
             </label>
+            {progress && (
+              <div className="mt-2" role="status" aria-live="polite">
+                <div className="mb-1 flex justify-between text-xs text-white/60">
+                  <span>{progress.label}</span>
+                  {progress.pct !== null && <span className="tabular-nums">{progress.pct}%</span>}
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className={`h-full rounded-full bg-active transition-all ${progress.pct === null ? "w-1/3 animate-pulse" : ""}`} style={progress.pct === null ? undefined : { width: `${progress.pct}%` }} />
+                </div>
+              </div>
+            )}
             <textarea
               id="c-gb"
               rows={3}
@@ -250,7 +346,7 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
             )}
             {draft && !readError && (
               <p role="status" className="mt-2 rounded-xl bg-safe/10 px-3 py-2 text-xs text-safe">
-                Terbaca: {draft.stages.length} tahapan dan {draft.tasks.length} tugas. Periksa pratinjau di kanan, hapus yang tidak perlu, lalu klik Buat Lomba.
+                Terbaca: {draft.stages.length} tahapan, {draft.tasks.length} tugas, {draft.rubric?.length ?? 0} kriteria rubrik, dan {draft.rules?.length ?? 0} aturan. Periksa pratinjau di kanan, hapus yang tidak perlu, lalu klik Buat Lomba.
               </p>
             )}
             <p className="mt-1 text-[11px] text-white/40">Tanpa AI, poin-poin dari teks tempel tetap menjadi tugas di milestone pertama.</p>
@@ -278,7 +374,10 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
               <div className="mb-2 flex items-center gap-2 rounded-lg border border-safe/30 bg-safe/10 px-3 py-2 text-xs text-safe">
                 <KeyRound size={14} /> Kode undangan: <strong className="tracking-wider">{plan.competition.inviteCode}</strong>
               </div>
-              <div className="max-h-[52vh] flex-1 space-y-3 overflow-y-auto pr-1">
+              <p className="mb-2 text-xs text-white/55">
+                Babak: {plan.stages.map((s) => s.name).join(" → ")}. Yang dijadwalkan sekarang hanya <strong>{plan.stages[0]?.name}</strong>.
+              </p>
+              <div className="max-h-[48vh] flex-1 space-y-3 overflow-y-auto pr-1">
                 {plan.milestones.map((m) => (
                   <div key={m.id}>
                     <div className="text-xs font-semibold">

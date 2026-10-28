@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, KeyRound, LayoutDashboard, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Sun, Trophy, Volume2, VolumeX } from "lucide-react";
+import { BellRing, History, KeyRound, LayoutDashboard, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Sun, Trophy, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { alarm, requestNotificationPermission } from "@/lib/alarm";
 import { isAlarming, scoreTone, userEmail } from "@/lib/logic";
@@ -14,10 +14,13 @@ import CompleteModal from "./modals/CompleteModal";
 import CreateCompetitionModal from "./modals/CreateCompetitionModal";
 import EditCompetitionModal from "./modals/EditCompetitionModal";
 import JoinCompetitionModal from "./modals/JoinCompetitionModal";
+import AddStageModal from "./modals/AddStageModal";
+import EvaluationModal, { type EvalContext } from "./modals/EvaluationModal";
+import HistoryView from "./HistoryView";
 import ReportModal from "./modals/ReportModal";
 import { Avatar, TONE } from "./ui";
 
-type View = { kind: "dashboard" } | { kind: "competition"; id: string };
+type View = { kind: "dashboard" } | { kind: "history" } | { kind: "competition"; id: string };
 type Theme = "light" | "dark";
 
 /** Auth gate: login screen until a session exists, then the app shell (re-mounted per user so view state never leaks between accounts). */
@@ -33,6 +36,8 @@ function Shell() {
   const [completeId, setCompleteId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  const [evalCtx, setEvalCtx] = useState<EvalContext | null>(null);
+  const [stageFor, setStageFor] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [ringingId, setRingingId] = useState<string | null>(null);
@@ -106,7 +111,7 @@ function Shell() {
   }
 
   const open = (id: string) => setView({ kind: "competition", id });
-  const title = current ? current.title : "Beranda";
+  const title = current ? current.title : view.kind === "history" ? "Riwayat & Evaluasi" : "Beranda";
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[1600px] lg:gap-2 lg:p-3">
@@ -126,7 +131,8 @@ function Shell() {
           )}
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto">
-          <NavButton collapsed={collapsed} active={!current} onClick={() => setView({ kind: "dashboard" })} icon={<LayoutDashboard size={18} />} label="Beranda" />
+          <NavButton collapsed={collapsed} active={!current && view.kind === "dashboard"} onClick={() => setView({ kind: "dashboard" })} icon={<LayoutDashboard size={18} />} label="Beranda" />
+          <NavButton collapsed={collapsed} active={view.kind === "history"} onClick={() => setView({ kind: "history" })} icon={<History size={18} />} label="Riwayat & Evaluasi" />
           {!collapsed && <div className="px-3 pb-1 pt-4 text-xs font-semibold text-white/40">Lomba Saya</div>}
           {collapsed && <div className="mx-3 my-3 h-px bg-white/10" />}
           {active.map((c) => {
@@ -212,18 +218,21 @@ function Shell() {
           </div>
         )}
 
-        {!current ? (
+        {view.kind === "history" ? (
+          <HistoryView onEvaluate={setEvalCtx} onOpen={open} />
+        ) : !current ? (
           <Dashboard onOpen={open} onComplete={setCompleteId} onCreate={() => setCreateOpen(true)} onJoin={() => setJoinOpen(true)} />
         ) : (
-          <Workspace key={current.id} competitionId={current.id} onComplete={setCompleteId} onTestAlarm={testAlarm} onReport={() => setReportId(current.id)} onEdit={() => setEditId(current.id)} />
+          <Workspace key={current.id} competitionId={current.id} onComplete={setCompleteId} onTestAlarm={testAlarm} onReport={() => setReportId(current.id)} onEdit={() => setEditId(current.id)} onEvaluate={setEvalCtx} onAddStage={() => setStageFor(current.id)} />
         )}
       </main>
 
       {/* Mobile bottom bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[rgb(var(--surface))] lg:hidden" aria-label="Navigasi utama">
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
-          <MobileTab active={!current} onClick={() => setView({ kind: "dashboard" })} label="Beranda" icon={<LayoutDashboard size={20} />} />
-          {active.slice(0, 2).map((c) => (
+          <MobileTab active={!current && view.kind === "dashboard"} onClick={() => setView({ kind: "dashboard" })} label="Beranda" icon={<LayoutDashboard size={20} />} />
+          <MobileTab active={view.kind === "history"} onClick={() => setView({ kind: "history" })} label="Riwayat" icon={<History size={20} />} />
+          {active.slice(0, 1).map((c) => (
             <MobileTab
               key={c.id}
               active={current?.id === c.id}
@@ -241,6 +250,8 @@ function Shell() {
       <CompleteModal taskId={completeId} onClose={() => setCompleteId(null)} />
       <ReportModal competitionId={reportId} onClose={() => setReportId(null)} />
       <EditCompetitionModal competitionId={editId} onClose={() => setEditId(null)} />
+      <EvaluationModal ctx={evalCtx} onClose={() => setEvalCtx(null)} onSaved={() => setView({ kind: "history" })} />
+      <AddStageModal competitionId={stageFor} onClose={() => setStageFor(null)} />
       <CreateCompetitionModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={open} />
       <JoinCompetitionModal open={joinOpen} onClose={() => setJoinOpen(false)} onJoined={open} />
     </div>

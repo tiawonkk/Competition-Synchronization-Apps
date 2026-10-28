@@ -16,6 +16,11 @@ Aplikasi PWA untuk mahasiswa yang mengikuti beberapa kompetisi sekaligus (Hackat
 | **Alarm Berdering (Stop-on-Confirm)** | Alarm Web Audio API (tanpa file MP3) untuk tugas yang jatuh tempo < 24 jam atau terlambat. Hanya berhenti setelah tugas ditandai selesai dengan tautan bukti OneDrive/Google Drive. |
 | **Ruang Kerja Tim** | 3–5 anggota dengan peran Ketua/Anggota/Pembina, lencana akun Gmail dan M365 Binus, milestone, daftar tugas dengan filter penanggung jawab. |
 | **Whiteboard & Ideasi** | Kanvas yang bisa digeser dan di-zoom: catatan tempel berwarna (Ide Utama, Fitur, Riset, Kendala), pena bebas, penghapus, voting +1, dan tombol **⚡ Jadikan Tugas** yang langsung membuat tugas dan menghitung ulang skor kesiapan. |
+| **Alur Babak (Kualifikasi → Semifinal → Final)** | Tiap lomba punya babak berurutan yang bisa diubah dan ditambah (mis. Pra-Kualifikasi, Bootcamp). Hanya babak aktif yang punya tugas; babak berikutnya terkunci. Saat hasil diumumkan, Ketua menekan **Lolos** (babak berikutnya terbuka dan tugasnya dibuat otomatis, Pembina mendapat email pembaruan) atau **Gugur** (pengingat tersisa dibatalkan dan form evaluasi terbuka). |
+| **Selesai & Evaluasi (Post-Mortem)** | Catat hasil (Juara 1–3, Harapan, Finalis, gugur), peringkat, skor, sertifikat, dan arsip karya, lalu isi evaluasi tim: hal yang berjalan baik, kendala, dan masukan juri. Tombol analisis membaca keterlambatan tugas, pembagian beban, dan catatan tim untuk memberi saran (berbasis aturan, tanpa model eksternal). Laporan Akhir Pertanggungjawaban dapat dikirim ke Pembina. |
+| **Riwayat & Evaluasi** | Halaman portofolio: win rate, persentase capai final, tugas selesai telat, daftar lomba dengan perjalanan babaknya, dan pencarian pelajaran dari semua evaluasi. |
+| **Baca Guidebook (PDF/teks)** | Teks PDF dibaca di browser halaman demi halaman (ukuran file tidak dibatasi), lalu Gemini mengambil babak bertanggal, rubrik penilaian, format berkas, aturan, dan tugas. PDF scan dikirim sebagai gambar halaman. |
+| **Unggah Berkas Besar** | Zona seret-dan-lepas untuk berkas besar dengan progres per potongan, jeda dan lanjut. **Masih simulasi**: tampilan meniru Supabase TUS (6 MB) dan Microsoft Graph createUploadSession (10 MiB), tetapi isi berkas belum dikirim ke mana pun. |
 | **Cloud Vault** | Tab khusus untuk tautan folder dan berkas (guidebook, diagram, pitch deck, ZIP) di OneDrive Pro dan Google Drive, dengan filter penyimpanan dan validasi tautan. |
 | **Laporan Pembina** | Pratinjau laporan formal berbahasa Indonesia (capaian, kontribusi anggota, rencana 7 hari, ide terpopuler, tautan dokumen), tombol kirim, riwayat pengiriman, dan saklar Auto-Send setiap Minggu 19:00 WIB. Hanya Ketua yang dapat mengirim. Pengiriman di mode demo hanya simulasi. |
 | **Tema Terang/Gelap** | Default terang; pilihan tersimpan. Sidebar desktop dapat diciutkan, navigasi bawah di mobile. |
@@ -70,11 +75,12 @@ supabase/
   schema.sql                    Tabel inti, RLS, trigger skor kesiapan
   schema_phase2.sql             Whiteboard, Realtime, asal-usul tugas
   schema_phase3.sql             Kode undangan, peran tim, Cloud Vault, fungsi join_competition
+  schema_stages_and_eval.sql    Babak lomba, evaluasi post-mortem, metadata unggahan berpotongan, bucket vault
 ```
 
 ## Menyiapkan Supabase
 
-1. Di **SQL Editor** jalankan berurutan: `supabase/schema.sql`, `supabase/schema_phase2.sql`, lalu `supabase/schema_phase3.sql`.
+1. Di **SQL Editor** jalankan berurutan: `supabase/schema.sql`, `supabase/schema_phase2.sql`, `supabase/schema_phase3.sql`, lalu `supabase/schema_stages_and_eval.sql`.
 2. Di **Authentication → Providers** aktifkan Google dan Azure (Microsoft) bila diperlukan.
 3. Salin Project URL, `anon` key, dan `service_role` key dari **Project Settings → API**.
 

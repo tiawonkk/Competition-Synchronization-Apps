@@ -96,7 +96,7 @@ export async function loadCompetitionData(db: SupabaseClient, competitionId: str
     })),
     resources: [],
     reports: [],
-    notices: [],
+    notices: [], stages: [], evaluations: [],
     session: null,
     whiteboard: ((board.data ?? []) as Row[]).map(
       (e): WhiteboardElement => ({

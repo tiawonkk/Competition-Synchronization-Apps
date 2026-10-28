@@ -146,7 +146,7 @@ export default function ReportModal({ competitionId, onClose }: { competitionId:
                       className={`flex w-full flex-wrap items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition hover:bg-white/[0.06] ${viewing === r.id ? "bg-active/10" : ""}`}
                     >
                       <Badge tone={r.status === "sent" ? "safe" : "warn"}>{r.status === "sent" ? "Terkirim" : "Draf"}</Badge>
-                      <span className="font-medium">Minggu {r.weekNumber}</span>
+                      <span className="font-medium">{r.kind === "final" ? "Laporan akhir" : r.kind === "stage" ? "Pembaruan babak" : `Minggu ${r.weekNumber}`}</span>
                       <span className="text-white/45">ke {r.sentToEmail}</span>
                       <span className="ml-auto text-white/40">{fmtDateTime(r.sentAt)}</span>
                     </button>

@@ -1,9 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
+import { OUTCOME_LABEL } from "./evaluation";
 import { computeReadiness, fmtDateTime, uid, type RescheduleMove } from "./logic";
 import { emptyData, type AppData } from "./seed";
-import type { AdvisorReport, Competition, Member, Milestone, Notice, Resource, Task, User, WhiteboardElement } from "./types";
+import type { AdvisorReport, Competition, Evaluation, Member, Milestone, Notice, Resource, Stage, Task, User, WhiteboardElement } from "./types";
 
 const STORAGE_KEY = "cs-state-v4";
 
@@ -12,7 +13,12 @@ type Action =
   | { type: "register"; user: User }
   | { type: "logout" }
   | { type: "complete"; taskId: string; proofUrl: string; at: string }
-  | { type: "addPlan"; competition: Competition; members: Member[]; milestones: Milestone[]; tasks: Task[] }
+  | { type: "addPlan"; competition: Competition; stages: Stage[]; members: Member[]; milestones: Milestone[]; tasks: Task[] }
+  | { type: "decideStage"; stageId: string; work: { milestones: Milestone[]; tasks: Task[] } | null }
+  | { type: "addTasks"; tasks: Task[] }
+  | { type: "addStage"; stage: Stage; afterStageId: string | null }
+  | { type: "finishCompetition"; evaluation: Evaluation; stageId?: string; stageResult?: "passed" | "eliminated" }
+  | { type: "saveEvaluation"; evaluation: Evaluation }
   | { type: "join"; competitionId: string; userId: string; teamRole: string }
   | { type: "reschedule"; moves: RescheduleMove[] }
   | { type: "assign"; taskId: string; userId: string }
@@ -62,6 +68,7 @@ function reducer(state: AppData, action: Action): AppData {
         {
           ...state,
           competitions: [...state.competitions, action.competition],
+          stages: [...state.stages, ...action.stages],
           members: [...state.members, ...action.members],
           milestones: [...state.milestones, ...action.milestones],
           tasks: [...state.tasks, ...action.tasks],
@@ -127,7 +134,7 @@ function reducer(state: AppData, action: Action): AppData {
       );
 
     case "saveReport":
-      return withNotice({ ...state, reports: [action.report, ...state.reports] }, `Laporan minggu ${action.report.weekNumber} terkirim ke ${action.report.sentToEmail}.`, "safe");
+      return withNotice({ ...state, reports: [action.report, ...state.reports] }, action.report.kind === "final" ? `Laporan akhir lomba terkirim ke ${action.report.sentToEmail}.` : action.report.kind === "stage" ? `Email pembaruan babak terkirim ke ${action.report.sentToEmail}.` : `Laporan minggu ${action.report.weekNumber} terkirim ke ${action.report.sentToEmail}.`, "safe");
 
     case "wbAdd":
       return { ...state, whiteboard: [...state.whiteboard, action.element] };
@@ -157,6 +164,68 @@ function reducer(state: AppData, action: Action): AppData {
         `Catatan whiteboard jadi tugas "${action.task.title}" (${fmtDateTime(action.task.dueDate)}) untuk ${user?.fullName ?? "tim"}.`,
       );
     }
+    case "decideStage": {
+      const stage = state.stages.find((s) => s.id === action.stageId);
+      if (!stage) return state;
+      const ordered = state.stages.filter((s) => s.competitionId === stage.competitionId).sort((a, b) => a.orderIndex - b.orderIndex);
+      const next = ordered[ordered.findIndex((s) => s.id === stage.id) + 1];
+      const comp = state.competitions.find((c) => c.id === stage.competitionId);
+      const advanced: AppData = {
+        ...state,
+        stages: state.stages.map((s) => (s.id === stage.id ? { ...s, status: "passed", decidedAt: new Date().toISOString() } : s.id === next?.id ? { ...s, status: "active" } : s)),
+        milestones: [...state.milestones, ...(action.work?.milestones ?? [])],
+        tasks: [...state.tasks, ...(action.work?.tasks ?? [])],
+      };
+      return withNotice(
+        advanced,
+        next
+          ? `"${comp?.title}" lolos dari ${stage.name} ke ${next.name}. ${action.work?.tasks.length ?? 0} tugas baru dijadwalkan dan tenggatnya disinkronkan ke Google Calendar dan Outlook anggota. ${comp?.advisorEmail ? "Email pembaruan dikirim ke Pembina (simulasi)." : "Isi email Pembina agar pembaruan bisa dikirim."}`
+          : `${stage.name} dinyatakan lolos.`,
+        "safe",
+      );
+    }
+
+    case "addTasks":
+      return withNotice({ ...state, tasks: [...state.tasks, ...action.tasks] }, `${action.tasks.length} tugas dari guidebook ditambahkan ke babak yang sedang berjalan.`, "safe");
+
+    case "addStage": {
+      const siblings = state.stages.filter((s) => s.competitionId === action.stage.competitionId).sort((a, b) => a.orderIndex - b.orderIndex);
+      const at = action.afterStageId ? siblings.findIndex((s) => s.id === action.afterStageId) + 1 : siblings.length;
+      const merged = [...siblings.slice(0, at), action.stage, ...siblings.slice(at)].map((s, i) => ({ ...s, orderIndex: i }));
+      const last = merged[merged.length - 1];
+      return withNotice(
+        {
+          ...state,
+          stages: [...state.stages.filter((s) => s.competitionId !== action.stage.competitionId), ...merged],
+          competitions: state.competitions.map((c) => (c.id === action.stage.competitionId ? { ...c, submissionDeadline: last.deadline } : c)),
+        },
+        `Babak "${action.stage.name}" ditambahkan ke linimasa.`,
+      );
+    }
+
+    case "finishCompetition": {
+      const { evaluation, stageId, stageResult } = action;
+      const comp = state.competitions.find((c) => c.id === evaluation.competitionId);
+      const done: AppData = {
+        ...state,
+        competitions: state.competitions.map((c) => (c.id === evaluation.competitionId ? { ...c, status: "archived", autoSendWeekly: false } : c)),
+        stages: state.stages.map((s) => (s.id === stageId && stageResult ? { ...s, status: stageResult, decidedAt: evaluation.completedAt } : s)),
+        // Future reminders are cancelled: silence alarms and drop the calendar event links of every open task.
+        tasks: state.tasks.map((t) =>
+          t.competitionId === evaluation.competitionId && !t.isCompleted ? { ...t, alarmActive: false, gcalEventId: undefined, outlookEventId: undefined } : t,
+        ),
+        evaluations: [...state.evaluations.filter((e) => e.competitionId !== evaluation.competitionId), evaluation],
+      };
+      return withNotice(done, `"${comp?.title}" selesai: ${OUTCOME_LABEL[evaluation.outcome]}. Pengingat kalender yang tersisa dibatalkan dan evaluasi tersimpan di Riwayat.`, "safe");
+    }
+
+    case "saveEvaluation":
+      return withNotice(
+        { ...state, evaluations: [...state.evaluations.filter((e) => e.competitionId !== action.evaluation.competitionId), action.evaluation] },
+        "Evaluasi lomba diperbarui.",
+        "safe",
+      );
+
     case "updateCompetition":
       return { ...state, competitions: state.competitions.map((c) => (c.id === action.id ? { ...c, ...action.patch } : c)) };
     case "reset":
@@ -171,11 +240,33 @@ interface Store {
   me: string;
   /** Competitions the signed-in user belongs to. */
   myCompetitions: Competition[];
+  /** Competitions still running (not archived); the dashboard, alarms and collision radar only look at these. */
+  liveCompetitions: Competition[];
   dispatch: (a: Action) => void;
   readiness: (competitionId: string) => number;
 }
 
 const Ctx = createContext<Store | null>(null);
+
+/** Fills fields added after a save was written: older competitions get one stage and their tasks join it. */
+function migrate(d: AppData): AppData {
+  const stages = [...(d.stages ?? [])];
+  const stageOf = new Map<string, string>();
+  for (const c of d.competitions) {
+    const existing = stages.find((s) => s.competitionId === c.id);
+    if (existing) continue;
+    const s: Stage = { id: uid("s"), competitionId: c.id, name: "Babak Utama", orderIndex: 0, status: c.status === "archived" ? "passed" : "active", deadline: c.submissionDeadline };
+    stages.push(s);
+    stageOf.set(c.id, s.id);
+  }
+  return {
+    ...d,
+    stages,
+    evaluations: d.evaluations ?? [],
+    milestones: d.milestones.map((m) => (m.stageId ? m : { ...m, stageId: stageOf.get(m.competitionId) })),
+    tasks: d.tasks.map((t) => (t.stageId ? t : { ...t, stageId: stageOf.get(t.competitionId) })),
+  };
+}
 
 function loadSaved(): AppData | null {
   try {
@@ -183,7 +274,7 @@ function loadSaved(): AppData | null {
     if (!raw) return null;
     const d = JSON.parse(raw) as Partial<AppData>;
     const ok = Array.isArray(d.users) && Array.isArray(d.competitions) && Array.isArray(d.members) && Array.isArray(d.tasks) && Array.isArray(d.notices) && "session" in d;
-    return ok ? (d as AppData) : null;
+    return ok ? migrate(d as AppData) : null;
   } catch {
     return null;
   }
@@ -225,6 +316,7 @@ function Inner({ initial, children }: { initial: AppData; children: ReactNode })
       now,
       me,
       myCompetitions: data.competitions.filter((c) => mine.has(c.id)),
+      liveCompetitions: data.competitions.filter((c) => mine.has(c.id) && c.status !== "archived"),
       dispatch,
       readiness: (id) => computeReadiness(data.tasks.filter((t) => t.competitionId === id)),
     };

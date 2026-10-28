@@ -1,11 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BellRing, Calendar, CheckCircle2, ExternalLink, KeyRound, Mail, Pencil, Send, Volume2, Zap } from "lucide-react";
+import { BellRing, Calendar, CheckCircle2, ChevronRight, ExternalLink, Flag, KeyRound, Lock, Mail, Pencil, PlayCircle, Plus, Send, Volume2, XCircle, Zap } from "lucide-react";
 import { useState } from "react";
-import { DAY, dueState, fmtDate, fmtDateTime, PRIORITY_LABEL, relative, scoreTone } from "@/lib/logic";
+import { OUTCOME_LABEL, STAGE_STATUS_LABEL } from "@/lib/evaluation";
+import { buildStageWork } from "@/lib/generator";
+import { generateStageUpdate } from "@/lib/report";
+import { DAY, fmtLong, uid, dueState, fmtDate, fmtDateTime, PRIORITY_LABEL, relative, scoreTone } from "@/lib/logic";
 import { useStore } from "@/lib/store";
-import type { Task } from "@/lib/types";
+import type { Stage, Task } from "@/lib/types";
+import type { EvalContext } from "./modals/EvaluationModal";
 import CloudVault from "./CloudVault";
 import { Avatar, Badge, Gauge, PRIORITY_TONE, TONE } from "./ui";
 import Whiteboard from "./Whiteboard";
@@ -16,23 +20,36 @@ export default function Workspace({
   onTestAlarm,
   onReport,
   onEdit,
+  onEvaluate,
+  onAddStage,
 }: {
   competitionId: string;
   onComplete: (taskId: string) => void;
   onTestAlarm: (taskId: string) => void;
   onReport: () => void;
   onEdit: () => void;
+  onEvaluate: (ctx: EvalContext) => void;
+  onAddStage: () => void;
 }) {
-  const { data, now, me, readiness } = useStore();
+  const { data, now, me, readiness, dispatch } = useStore();
   const [assignee, setAssignee] = useState<string>("all");
   const [showDone, setShowDone] = useState(true);
   const [tab, setTab] = useState<"tasks" | "board" | "vault">("tasks");
   const [copied, setCopied] = useState(false);
+  const [stageSel, setStageSel] = useState<string | null>(null);
 
   const comp = data.competitions.find((c) => c.id === competitionId)!;
   const team = data.members.filter((m) => m.competitionId === competitionId);
   const tasks = data.tasks.filter((t) => t.competitionId === competitionId);
-  const milestones = data.milestones.filter((m) => m.competitionId === competitionId).sort((a, b) => a.orderIndex - b.orderIndex);
+  const stages = data.stages.filter((s) => s.competitionId === competitionId).sort((a, b) => a.orderIndex - b.orderIndex);
+  const activeStage = stages.find((s) => s.status === "active");
+  const sel: Stage | undefined = stages.find((s) => s.id === stageSel) ?? activeStage ?? stages[stages.length - 1];
+  const finished = comp.status === "archived";
+  const evaluation = data.evaluations.find((e) => e.competitionId === competitionId);
+  const milestones = data.milestones.filter((m) => m.competitionId === competitionId && m.stageId === sel?.id).sort((a, b) => a.orderIndex - b.orderIndex);
+  const selTasks = tasks.filter((t) => t.stageId === sel?.id);
+  const nextStage = activeStage ? stages[stages.indexOf(activeStage) + 1] : undefined;
+  const stageDone = !!activeStage && tasks.filter((t) => t.stageId === activeStage.id).length > 0 && tasks.filter((t) => t.stageId === activeStage.id).every((t) => t.isCompleted);
   const userOf = (id: string | null) => data.users.find((u) => u.id === id);
   const score = readiness(competitionId);
   const done = tasks.filter((t) => t.isCompleted).length;
@@ -49,6 +66,31 @@ export default function Workspace({
     } catch {
       /* clipboard blocked: the code stays visible to copy by hand */
     }
+  }
+
+  function advance() {
+    if (!activeStage || !nextStage) return;
+    if (!window.confirm(`Tandai ${activeStage.name} lolos dan buka ${nextStage.name}?`)) return;
+    const work = buildStageWork({
+      competitionId,
+      stage: nextStage,
+      category: comp.category,
+      assignees: team.filter((m) => m.role !== "advisor").map((m) => m.userId),
+      start: now,
+      isFinal: nextStage.orderIndex === stages.length - 1,
+    });
+    dispatch({ type: "decideStage", stageId: activeStage.id, work });
+    if (comp.advisorEmail) {
+      const mail = generateStageUpdate(comp, activeStage.name, nextStage.name, work.tasks.length, now);
+      dispatch({ type: "saveReport", report: { id: uid("rep"), competitionId, weekNumber: 0, html: mail.html, sentToEmail: comp.advisorEmail, sentAt: new Date().toISOString(), status: "sent", kind: "stage" } });
+    }
+    setStageSel(nextStage.id);
+  }
+
+  function eliminate() {
+    if (!activeStage) return;
+    if (!window.confirm(`Tandai tim gugur di ${activeStage.name}? Pengingat yang tersisa akan dibatalkan.`)) return;
+    onEvaluate({ competitionId, stageId: activeStage.id, stageResult: "eliminated" });
   }
 
   const visible = (t: Task) => (assignee === "all" || t.assignedTo === assignee) && (showDone || !t.isCompleted);
@@ -88,11 +130,86 @@ export default function Workspace({
                 <Pencil size={15} /> Ubah Detail
               </button>
             )}
+            {myRole === "leader" && !finished && (
+              <button className="btn-ghost" onClick={() => onEvaluate({ competitionId })}>
+                <Flag size={15} /> Selesaikan Lomba
+              </button>
+            )}
+            {finished && (
+              <button className="btn-ghost" onClick={() => onEvaluate({ competitionId })}>
+                <Flag size={15} /> Lihat Evaluasi
+              </button>
+            )}
             <button className="btn-primary" onClick={onReport}>
               <Mail size={16} /> Laporan Pembina
             </button>
           </div>
         </div>
+      </section>
+
+      {/* Stage-gate pipeline */}
+      <section className="card p-4 sm:p-5" aria-labelledby="pipe-h">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="pipe-h" className="text-sm font-semibold">Alur Babak Lomba</h2>
+          {myRole === "leader" && !finished && (
+            <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={onAddStage}>
+              <Plus size={14} /> Tambah Babak
+            </button>
+          )}
+        </div>
+        <ol className="flex items-stretch gap-1.5 overflow-x-auto pb-1" aria-label="Daftar babak">
+          {stages.map((s, i) => {
+            const StageIcon = s.status === "passed" ? CheckCircle2 : s.status === "eliminated" ? XCircle : s.status === "active" ? PlayCircle : Lock;
+            const tone = s.status === "passed" ? "text-safe" : s.status === "eliminated" ? "text-danger" : s.status === "active" ? "text-active" : "text-white/35";
+            const dropped = finished && s.status === "upcoming";
+            return (
+              <li key={s.id} className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setStageSel(s.id)}
+                  aria-current={sel?.id === s.id ? "step" : undefined}
+                  className={`min-w-[8.5rem] rounded-2xl border px-3 py-2.5 text-left transition ${sel?.id === s.id ? "border-active bg-active/[0.08]" : "border-white/10 hover:bg-white/[0.05]"}`}
+                >
+                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${tone}`}>
+                    <StageIcon size={14} /> {dropped ? "Tidak dilanjutkan" : STAGE_STATUS_LABEL[s.status]}
+                  </span>
+                  <span className="mt-0.5 block truncate text-sm font-semibold">{s.name}</span>
+                  <span className="block text-[11px] text-white/45">{fmtDate(s.deadline)}</span>
+                </button>
+                {i < stages.length - 1 && <ChevronRight size={16} className="shrink-0 text-white/25" />}
+              </li>
+            );
+          })}
+        </ol>
+
+        {finished && evaluation && (
+          <p className="mt-3 rounded-xl bg-safe/10 px-3.5 py-2.5 text-sm text-safe">
+            Lomba selesai: <strong>{OUTCOME_LABEL[evaluation.outcome]}</strong>
+            {evaluation.rank ? ` · ${evaluation.rank}` : ""}. Evaluasi tersimpan di Riwayat.
+          </p>
+        )}
+
+        {myRole === "leader" && !finished && activeStage && (
+          <div className={`mt-3 rounded-2xl p-3.5 ${stageDone ? "bg-safe/[0.1]" : "bg-white/[0.04]"}`}>
+            <div className="text-sm font-semibold">
+              {stageDone ? `Semua tugas ${activeStage.name} selesai. Bagaimana hasil babak ini?` : `Keputusan hasil ${activeStage.name}`}
+            </div>
+            {!stageDone && <p className="text-xs text-white/50">Tekan setelah panitia mengumumkan hasil, bahkan bila masih ada tugas yang terbuka.</p>}
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {nextStage ? (
+                <button className="btn-safe" onClick={advance}>
+                  🎉 Lolos ke {nextStage.name}
+                </button>
+              ) : (
+                <button className="btn-safe" onClick={() => onEvaluate({ competitionId, stageId: activeStage.id, stageResult: "passed" })}>
+                  🏁 Selesai Lomba
+                </button>
+              )}
+              <button className="btn-ghost !border-danger/40 !text-danger hover:!bg-danger/10" onClick={eliminate}>
+                🛑 Gugur di Babak Ini
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="flex gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1 sm:w-fit" role="tablist">
@@ -166,11 +283,16 @@ export default function Workspace({
             </div>
           </section>
 
+          {comp.guide && <GuideCard guide={comp.guide} />}
+
           {/* Milestones & tasks */}
+          {sel?.status === "upcoming" ? (
+            <LockedStage stage={sel} finished={finished} />
+          ) : (
           <section className="card p-4 sm:p-5" aria-labelledby="task-h">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 id="task-h" className="text-sm font-semibold">
-                Milestone &amp; Daftar Tugas
+                Milestone &amp; Tugas{sel ? ` · ${sel.name}` : ""}
               </h2>
               <div className="flex flex-wrap items-center gap-2">
                 <select className="field !w-auto !py-1.5 text-xs" value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="Filter penanggung jawab">
@@ -192,6 +314,7 @@ export default function Workspace({
             </div>
 
             <div className="space-y-5">
+              {selTasks.length === 0 && <p className="py-4 text-center text-xs text-white/40">Belum ada tugas di babak ini.</p>}
               {milestones.map((m) => {
                 const mt = tasks.filter((t) => t.milestoneId === m.id);
                 const mDone = mt.filter((t) => t.isCompleted).length;
@@ -225,6 +348,7 @@ export default function Workspace({
               })}
             </div>
           </section>
+          )}
         </div>
 
       </div>
@@ -313,5 +437,67 @@ function TaskRow({ task, onComplete, onTestAlarm }: { task: Task; onComplete: (i
         )}
       </div>
     </motion.li>
+  );
+}
+
+function LockedStage({ stage, finished }: { stage: Stage; finished: boolean }) {
+  const plan = stage.plan;
+  return (
+    <section className="card p-5 text-center" aria-label={`Babak ${stage.name} terkunci`}>
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-white/[0.07] text-white/50">
+        <Lock size={22} />
+      </span>
+      <h2 className="mt-3 text-base font-bold">{finished ? `${stage.name} tidak dilanjutkan` : `${stage.name} masih terkunci`}</h2>
+      <p className="mx-auto mt-1 max-w-md text-sm text-white/55">
+        {finished
+          ? "Lomba sudah selesai sebelum babak ini dimulai."
+          : `Tugas dan milestone babak ini dibuat otomatis ketika tim dinyatakan lolos ke sini. Tenggat babak: ${fmtLong(stage.deadline)}.`}
+      </p>
+      {!finished && plan && (plan.tasks.length > 0 || plan.marks.length > 0) && (
+        <div className="mx-auto mt-4 max-w-md rounded-2xl bg-white/[0.04] p-3 text-left text-xs text-white/60">
+          <div className="mb-1 font-semibold text-white/80">Sudah terbaca dari guidebook untuk babak ini</div>
+          <ul className="list-disc space-y-0.5 pl-4">
+            {plan.marks.map((m) => (
+              <li key={m.name + m.date}>{m.name} ({m.date})</li>
+            ))}
+            {plan.tasks.map((t) => (
+              <li key={t.title}>{t.title}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function GuideCard({ guide }: { guide: NonNullable<import("@/lib/types").Competition["guide"]> }) {
+  return (
+    <details className="card p-4 sm:p-5">
+      <summary className="cursor-pointer text-sm font-semibold">Isi Guidebook: rubrik, format berkas, dan aturan</summary>
+      <div className="mt-3 grid gap-4 text-sm md:grid-cols-3">
+        <div>
+          <div className="mb-1 text-xs font-semibold text-white/60">Rubrik penilaian</div>
+          {guide.rubric.length === 0 ? <p className="text-xs text-white/40">Tidak ditemukan.</p> : (
+            <ul className="space-y-1">
+              {guide.rubric.map((r) => (
+                <li key={r.criterion} className="flex justify-between gap-2"><span>{r.criterion}</span><span className="shrink-0 font-semibold">{r.weight}</span></li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-semibold text-white/60">Format berkas</div>
+          {guide.deliverables.length === 0 ? <p className="text-xs text-white/40">Tidak ditemukan.</p> : (
+            <ul className="list-disc space-y-1 pl-4">{guide.deliverables.map((d) => <li key={d}>{d}</li>)}</ul>
+          )}
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-semibold text-white/60">Aturan penting</div>
+          {guide.rules.length === 0 ? <p className="text-xs text-white/40">Tidak ditemukan.</p> : (
+            <ul className="list-disc space-y-1 pl-4">{guide.rules.map((r) => <li key={r}>{r}</li>)}</ul>
+          )}
+        </div>
+      </div>
+    </details>
   );
 }
