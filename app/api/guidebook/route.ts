@@ -7,12 +7,13 @@ export const maxDuration = 60;
 /**
  * POST /api/guidebook   multipart/form-data { file?: PDF, text?: string }
  * Reads a competition guidebook with Gemini and returns a GuidebookDraft (stages with dates + required tasks).
- * Needs GEMINI_API_KEY (free key from Google AI Studio); optional GEMINI_MODEL.
+ * Needs GEMINI_API_KEY (free key from Google AI Studio); optional GEMINI_MODEL is tried first.
+ * Google retires model ids over time (a retired or restricted id answers 404), so later candidates are tried in order.
  * Vercel limits request bodies to ~4.5 MB, so PDFs above 4 MB are refused up front.
  */
 
 const MAX_BYTES = 4 * 1024 * 1024;
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODELS = [...new Set([process.env.GEMINI_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash"].filter((m): m is string => !!m))];
 
 // Best-effort per-IP throttle (per server instance) so a public deployment cannot drain the free quota.
 const hits = new Map<string, number[]>();
@@ -115,18 +116,26 @@ export async function POST(req: NextRequest) {
   parts.push({ text: prompt(new Date().toISOString().slice(0, 10)) });
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.1 },
-      }),
-      signal: AbortSignal.timeout(50_000),
+    const payload = JSON.stringify({
+      contents: [{ role: "user", parts }],
+      generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.1 },
     });
-    if (!res.ok) {
-      const status = res.status === 429 ? 429 : 502;
-      return NextResponse.json({ error: res.status === 429 ? "Kuota gratis Gemini sedang habis. Coba lagi nanti." : `Gemini menolak permintaan (${res.status}).` }, { status });
+    const deadline = AbortSignal.timeout(50_000);
+    let res: Response | null = null;
+    for (const model of MODELS) {
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: payload,
+        signal: deadline,
+      });
+      if (res.status !== 404) break; // 404 = this model id is not available to the key: try the next one
+    }
+    if (!res || !res.ok) {
+      const code = res?.status ?? 0;
+      if (code === 429) return NextResponse.json({ error: "Kuota gratis Gemini sedang habis. Coba lagi nanti." }, { status: 429 });
+      const hint = code === 404 ? " Tidak ada model yang tersedia untuk kunci ini; isi GEMINI_MODEL dengan model yang tampil di Google AI Studio." : "";
+      return NextResponse.json({ error: `Gemini menolak permintaan (${code}).${hint}` }, { status: 502 });
     }
     const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const out = body.candidates?.[0]?.content?.parts?.[0]?.text;

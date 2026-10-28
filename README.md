@@ -91,7 +91,7 @@ Salin `.env.example` menjadi `.env.local` dan isi:
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Calendar (scope `calendar.events`, `access_type=offline`) |
 | `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_TENANT_ID` | Microsoft Graph (`Calendars.ReadWrite offline_access`). **Opsional**: banyak tenant kampus memblokir persetujuan aplikasi pihak ketiga. |
 | `RESEND_API_KEY`, `REPORT_FROM` | Pengiriman email laporan |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Pembaca guidebook PDF (kunci gratis dari Google AI Studio) |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Pembaca guidebook PDF (kunci gratis dari Google AI Studio). `GEMINI_MODEL` opsional; model yang tidak tersedia (404) dilewati otomatis |
 | `CRON_SECRET` | Melindungi endpoint cron laporan mingguan |
 
 ## Rute API
