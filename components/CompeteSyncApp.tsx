@@ -41,6 +41,7 @@ function Shell() {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [ringingId, setRingingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [testing, setTesting] = useState(false); // the ringing alarm was started by "Uji Alarm"
   const [armed, setArmed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -114,6 +115,11 @@ function Shell() {
   }
 
   const open = (id: string) => setView({ kind: "competition", id });
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4500);
+    return () => clearTimeout(t);
+  }, [toast]);
   const title = current ? current.title : view.kind === "history" ? "Riwayat & Evaluasi" : "Beranda";
 
   return (
@@ -265,7 +271,19 @@ function Shell() {
       <EvaluationModal ctx={evalCtx} onClose={() => setEvalCtx(null)} onSaved={() => setView({ kind: "history" })} />
       <AddStageModal competitionId={stageFor} onClose={() => setStageFor(null)} />
       <CreateCompetitionModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={open} />
-      <JoinCompetitionModal open={joinOpen} onClose={() => setJoinOpen(false)} onJoined={open} />
+      <JoinCompetitionModal
+        open={joinOpen}
+        onClose={() => setJoinOpen(false)}
+        onJoined={(id, message) => {
+          open(id);
+          if (message) setToast(message);
+        }}
+      />
+      {toast && (
+        <div role="status" aria-live="polite" className="fixed bottom-24 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 rounded-2xl bg-[#1c1c20] px-4 py-3 text-sm font-medium text-[#fff] shadow-xl lg:bottom-8">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

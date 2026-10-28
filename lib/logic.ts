@@ -251,12 +251,18 @@ export function planReschedule(competitions: Competition[], tasks: Task[], now: 
 }
 
 // ---------- Invite codes & weekly auto-send ----------
+/** "stack-88", "STACK 88" and "STACK88" all become "STACK88": codes are compared without case, spaces or hyphens. */
+export function normalizeInviteCode(raw: string): string {
+  return (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 /** "Hackathon Nasional AI" -> "HACK-88". Retries until the code is unused. */
 export function makeInviteCode(title: string, taken: string[]): string {
   const prefix = title.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4) || "TIM";
+  const used = new Set(taken.map(normalizeInviteCode));
   for (let i = 0; i < 200; i++) {
     const code = `${prefix}-${10 + Math.floor(Math.random() * 90)}`;
-    if (!taken.includes(code)) return code;
+    if (!used.has(normalizeInviteCode(code))) return code;
   }
   return `${prefix}-${Date.now().toString().slice(-4)}`;
 }

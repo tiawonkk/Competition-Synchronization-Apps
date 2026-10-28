@@ -85,9 +85,17 @@ export async function syncTask(taskId: string): Promise<{ ok: boolean; status?: 
   return res.json();
 }
 
-/** Join a competition by invite code (see `join_competition` in supabase/schema_phase3.sql). */
-export async function joinByCode(code: string, teamRole: string): Promise<string> {
+export interface JoinResult {
+  success: boolean;
+  competition_id?: string;
+  title?: string;
+  already_member?: boolean; // true when the caller was already in the team (the role is only updated)
+  error?: string;
+}
+
+/** Join a competition by invite code (see `join_competition` in supabase/schema_fix_join.sql). */
+export async function joinByCode(code: string, teamRole: string): Promise<JoinResult> {
   const { data, error } = await requireClient().rpc("join_competition", { p_code: code, p_team_role: teamRole });
   if (error) throw error;
-  return data as string;
+  return data as JoinResult;
 }

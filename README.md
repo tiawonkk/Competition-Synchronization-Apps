@@ -78,11 +78,12 @@ supabase/
   schema_phase2.sql             Whiteboard, Realtime, asal-usul tugas
   schema_phase3.sql             Kode undangan, peran tim, Cloud Vault, fungsi join_competition
   schema_stages_and_eval.sql    Babak lomba, evaluasi post-mortem, metadata unggahan berpotongan, bucket vault
+  schema_fix_join.sql           Gabung lewat kode: pencocokan toleran, anggota lama tidak error, tanpa masalah RLS
 ```
 
 ## Menyiapkan Supabase
 
-1. Di **SQL Editor** jalankan berurutan: `supabase/schema.sql`, `supabase/schema_phase2.sql`, `supabase/schema_phase3.sql`, lalu `supabase/schema_stages_and_eval.sql`.
+1. Di **SQL Editor** jalankan berurutan: `supabase/schema.sql`, `supabase/schema_phase2.sql`, `supabase/schema_phase3.sql`, lalu `supabase/schema_stages_and_eval.sql`, lalu `supabase/schema_fix_join.sql`.
 2. Di **Authentication → Providers** aktifkan Google dan Azure (Microsoft) bila diperlukan.
 3. Salin Project URL, `anon` key, dan `service_role` key dari **Project Settings → API**.
 

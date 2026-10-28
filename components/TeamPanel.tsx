@@ -51,8 +51,12 @@ export default function TeamPanel({
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
+          <span className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs">
+            <span className="text-white/50">Kode Invite:</span>
+            <strong className="font-mono tracking-wider">{comp.inviteCode}</strong>
+          </span>
           <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={copyCode}>
-            <Link2 size={14} /> {copied ? "Tersalin!" : "Salin Kode Invite"}
+            <Link2 size={14} /> {copied ? "Tersalin!" : "📋 Salin Kode"}
           </button>
           {!finished && (
             <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setInvite(true)} disabled={full} title={full ? `Tim penuh (maksimal ${MAX_TEAM} anggota)` : undefined}>

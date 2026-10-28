@@ -131,7 +131,7 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
         leaderId: me,
         memberIds: [me],
         now,
-        inviteCode: makeInviteCode(title, taken),
+        inviteCode: makeInviteCode(name, taken),
         onedriveFolderUrl: onedrive.trim(),
         gdriveFolderUrl: gdrive.trim(),
         extraTasks: extractGuidebookTasks(guidebook),
