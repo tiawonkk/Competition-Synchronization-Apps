@@ -3,6 +3,7 @@
 import { BellRing, History, KeyRound, LayoutDashboard, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Sun, Trophy, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { alarm, requestNotificationPermission } from "@/lib/alarm";
+import { captureJoinHash, decodeSnapshot, takePendingJoin } from "@/lib/join-link";
 import { isAlarming, scoreTone, userEmail } from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import Dashboard from "./Dashboard";
@@ -31,7 +32,7 @@ export default function CompeteSyncApp() {
 
 /** Top-level shell: adaptive theme, collapsible sidebar (desktop), bottom bar (mobile) and global modals. */
 function Shell() {
-  const { data, now, me, myCompetitions, dispatch, readiness } = useStore();
+  const { data, now, me, myCompetitions, dispatch, readiness, cloud } = useStore();
   const [view, setView] = useState<View>({ kind: "dashboard" });
   const [completeId, setCompleteId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
@@ -40,6 +41,7 @@ function Shell() {
   const [stageFor, setStageFor] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
   const [ringingId, setRingingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [testing, setTesting] = useState(false); // the ringing alarm was started by "Uji Alarm"
@@ -56,6 +58,23 @@ function Shell() {
     }
     // Signing out (or switching account) unmounts the shell: never leave an alarm ringing for the previous user.
     return () => alarm.stop();
+  }, []);
+
+  // An invite link (#join=CODE, optionally carrying the competition): open the join dialog with the code filled in.
+  useEffect(() => {
+    captureJoinHash();
+    const pending = takePendingJoin();
+    if (!pending) return;
+    (async () => {
+      if (pending.data) {
+        const ops = await decodeSnapshot(pending.data);
+        const comp = ops?.find((o) => o.k === "competition");
+        if (ops && comp && !data.competitions.some((c) => c.id === comp.id)) cloud.importRoom(ops, comp.id);
+      }
+      setJoinCode(pending.code);
+      setJoinOpen(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function toggleTheme() {
@@ -273,7 +292,11 @@ function Shell() {
       <CreateCompetitionModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={open} />
       <JoinCompetitionModal
         open={joinOpen}
-        onClose={() => setJoinOpen(false)}
+        initialCode={joinCode}
+        onClose={() => {
+          setJoinOpen(false);
+          setJoinCode("");
+        }}
         onJoined={(id, message) => {
           open(id);
           if (message) setToast(message);

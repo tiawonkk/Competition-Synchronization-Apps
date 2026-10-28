@@ -1,9 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
+import { applyOps, type Op } from "./cloud-ops";
 import { OUTCOME_LABEL } from "./evaluation";
 import { computeReadiness, fmtDateTime, uid, type RescheduleMove } from "./logic";
 import { emptyData, type AppData } from "./seed";
+import { useCloud, type CloudInfo } from "./use-cloud";
 import type { AdvisorReport, Competition, Evaluation, Member, Milestone, Notice, Resource, Stage, Task, User, WhiteboardElement } from "./types";
 
 const STORAGE_KEY = "cs-state-v4";
@@ -15,6 +17,7 @@ type Action =
   | { type: "complete"; taskId: string; proofUrl: string; at: string }
   | { type: "addPlan"; competition: Competition; stages: Stage[]; members: Member[]; milestones: Milestone[]; tasks: Task[] }
   | { type: "decideStage"; stageId: string; work: { milestones: Milestone[]; tasks: Task[] } | null }
+  | { type: "remoteApply"; ops: Op[]; roomId: string } // changes that arrived from the cloud or an invite link
   | { type: "addTasks"; tasks: Task[] }
   | { type: "setTeamRole"; competitionId: string; userId: string; teamRole: string }
   | { type: "removeMember"; competitionId: string; userId: string }
@@ -300,6 +303,9 @@ function reducer(state: AppData, action: Action): AppData {
       );
     }
 
+    case "remoteApply":
+      return applyOps(state, action.ops, action.roomId);
+
     case "addTasks":
       return withNotice({ ...state, tasks: [...state.tasks, ...action.tasks] }, `${action.tasks.length} tugas dari guidebook ditambahkan ke babak yang sedang berjalan.`, "safe");
 
@@ -358,6 +364,8 @@ interface Store {
   /** Competitions still running (not archived); the dashboard, alarms and collision radar only look at these. */
   liveCompetitions: Competition[];
   dispatch: (a: Action) => void;
+  /** Cloud sync for competitions shared between devices. */
+  cloud: CloudInfo;
   readiness: (competitionId: string) => number;
 }
 
@@ -423,8 +431,11 @@ function Inner({ initial, children }: { initial: AppData; children: ReactNode })
     }
   }, [data]);
 
+  const me = data.session ?? "";
+  const applyRemote = useCallback((ops: Op[], roomId: string) => dispatch({ type: "remoteApply", ops, roomId }), []);
+  const cloud = useCloud(data, me, applyRemote);
+
   const value = useMemo<Store>(() => {
-    const me = data.session ?? "";
     const mine = new Set(data.members.filter((m) => m.userId === me).map((m) => m.competitionId));
     return {
       data,
@@ -433,9 +444,10 @@ function Inner({ initial, children }: { initial: AppData; children: ReactNode })
       myCompetitions: data.competitions.filter((c) => mine.has(c.id)),
       liveCompetitions: data.competitions.filter((c) => mine.has(c.id) && c.status !== "archived"),
       dispatch,
+      cloud,
       readiness: (id) => computeReadiness(data.tasks.filter((t) => t.competitionId === id)),
     };
-  }, [data, now]);
+  }, [data, now, me, cloud]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

@@ -2,6 +2,7 @@
 
 import { CalendarCheck, Eye, EyeOff, Loader2, Mail, Moon, Sun, Trophy, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { captureJoinHash, peekPendingJoin, type PendingJoin } from "@/lib/join-link";
 import { uid, userEmail } from "@/lib/logic";
 import { hashPassword, isEmail, randomSalt } from "@/lib/passwords";
 import { AVATAR_COLORS } from "@/lib/seed";
@@ -27,9 +28,12 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dark, setDark] = useState(false);
+  const [invite, setInvite] = useState<PendingJoin | null>(null);
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"));
+    captureJoinHash();
+    setInvite(peekPendingJoin());
   }, []);
 
   function toggleTheme() {
@@ -132,6 +136,11 @@ export default function LoginScreen() {
             <span className="text-lg font-bold">CompeteSync</span>
           </div>
 
+          {invite && (
+            <p role="status" className="mb-4 rounded-2xl bg-active/10 px-4 py-3 text-sm text-active">
+              Kamu diundang bergabung ke sebuah lomba (kode <strong className="font-mono tracking-wider">{invite.code}</strong>). Masuk atau daftar dulu, lalu jendela gabung terbuka otomatis.
+            </p>
+          )}
           <h1 className="text-3xl font-extrabold tracking-tight">{mode === "login" ? "Selamat datang kembali" : "Buat akun baru"}</h1>
           <p className="mt-1.5 text-sm text-white/60">
             {mode === "login" ? "Masuk untuk melanjutkan ke lomba Anda." : "Gratis dan siap dipakai dalam satu menit."}

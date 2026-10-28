@@ -23,6 +23,8 @@ Aplikasi PWA untuk mahasiswa yang mengikuti beberapa kompetisi sekaligus (Hackat
 | **Unggah Berkas Besar** | Zona seret-dan-lepas untuk berkas besar dengan progres per potongan, jeda dan lanjut. **Masih simulasi**: tampilan meniru Supabase TUS (6 MB) dan Microsoft Graph createUploadSession (10 MiB), tetapi isi berkas belum dikirim ke mana pun. |
 | **Kalender Kompetisi** | Kalender bulanan dan mingguan (grid waktu) lintas semua lomba di Beranda, dengan pil agenda berlabel lomba, filter per lomba, penanda hari padat atau bentrok, dan panel hari berisi aksi Selesai, Edit, Hapus, serta tambah pekerjaan. Di halaman lomba ada kalender mini dengan penanda warna dan filter tanggal. |
 | **Tim & Pembina** | Kartu anggota dengan peran yang bisa diubah, lencana kalender terhubung, dan tombol keluarkan anggota (Ketua). Undangan berupa kode dan pesan siap kirim (tidak ada email otomatis). Kartu Pembina bisa diatur langsung dan punya pintasan Kirim Laporan. |
+| **Sinkron Cloud (multi-perangkat)** | Lomba yang dibuat di laptop bisa dibuka dan diedit dari HP atau laptop anggota lain. Tiap lomba adalah satu room; perangkat bertukar operasi kecil lewat `/api/store`, jadi dua orang yang mengedit tugas berbeda tidak saling menimpa. Perubahan perangkat lain muncul dalam sekitar 4 detik. Kode undangan menjadi kunci room. **Akun, kata sandi, dan email login tidak pernah dikirim ke cloud.** Perlu `NEXT_PUBLIC_SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` di Vercel plus `supabase/schema_cloud_sync.sql`. Tanpa itu aplikasi berjalan lokal dan memberi tahu bahwa cloud belum aktif. |
+| **Link Undangan** | Tombol Salin Link Undangan di kartu Tim. Dengan cloud aktif, link cukup membawa kode. Tanpa cloud, data lomba ikut di dalam link (setelah tanda #, tidak dikirim ke server) sebagai salinan lokal yang tidak tersinkron. |
 | **Cloud Vault** | Tab khusus untuk tautan folder dan berkas (guidebook, diagram, pitch deck, ZIP) di OneDrive Pro dan Google Drive, dengan filter penyimpanan dan validasi tautan. |
 | **Laporan Pembina** | Pratinjau laporan formal berbahasa Indonesia (capaian, kontribusi anggota, rencana 7 hari, ide terpopuler, tautan dokumen), tombol kirim, riwayat pengiriman, dan saklar Auto-Send setiap Minggu 19:00 WIB. Hanya Ketua yang dapat mengirim. Pengiriman di mode demo hanya simulasi. |
 | **Tema Terang/Gelap** | Default terang; pilihan tersimpan. Sidebar desktop dapat diciutkan, navigasi bawah di mobile. |
@@ -79,6 +81,7 @@ supabase/
   schema_phase3.sql             Kode undangan, peran tim, Cloud Vault, fungsi join_competition
   schema_stages_and_eval.sql    Babak lomba, evaluasi post-mortem, metadata unggahan berpotongan, bucket vault
   schema_fix_join.sql           Gabung lewat kode: pencocokan toleran, anggota lama tidak error, tanpa masalah RLS
+  schema_cloud_sync.sql         Dua tabel untuk sinkron cloud multi-perangkat (cs_rooms, cs_events)
 ```
 
 ## Menyiapkan Supabase

@@ -1,7 +1,9 @@
 "use client";
 
-import { Copy, GraduationCap, Link2, Mail, Pencil, Send, Trash2, UserPlus } from "lucide-react";
+import { Copy, GraduationCap, Link2, Mail, Pencil, Send, Share2, Trash2, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { fullOps } from "@/lib/cloud-ops";
+import { buildJoinLink } from "@/lib/join-link";
 import { isEmail } from "@/lib/passwords";
 import { TEAM_ROLES } from "@/lib/seed";
 import { useStore } from "@/lib/store";
@@ -21,12 +23,13 @@ export default function TeamPanel({
   onAssignee: (id: string) => void;
   onReport: () => void;
 }) {
-  const { data, me, dispatch } = useStore();
+  const { data, me, dispatch, cloud } = useStore();
   const comp = data.competitions.find((c) => c.id === competitionId)!;
   const team = data.members.filter((m) => m.competitionId === competitionId && m.role !== "advisor");
   const isLeader = team.some((m) => m.userId === me && m.role === "leader");
   const finished = comp.status === "archived";
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [invite, setInvite] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
   const full = team.length >= MAX_TEAM;
@@ -41,6 +44,30 @@ export default function TeamPanel({
     }
   }
 
+  /** With cloud sync the code alone is enough; without it the competition itself travels inside the link. */
+  async function copyLink() {
+    const online = cloud.mode === "supabase" || cloud.mode === "memory";
+    try {
+      const link = await buildJoinLink(window.location.origin, comp.inviteCode, online ? undefined : fullOps(data, competitionId));
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2200);
+    } catch {
+      /* clipboard blocked: the code and the invite message are still available */
+    }
+  }
+
+  const cloudLabel =
+    cloud.mode === "off"
+      ? "☁️ Cloud belum aktif · data hanya di browser ini"
+      : cloud.mode === "checking"
+        ? "☁️ Memeriksa cloud…"
+        : cloud.status === "syncing"
+          ? "☁️ Menyimpan…"
+          : cloud.status === "error"
+            ? "☁️ Gagal sinkron, mencoba lagi"
+            : "☁️ Tersinkron ke cloud";
+
   return (
     <section className="card p-4 sm:p-5" aria-labelledby="team-h">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -48,6 +75,9 @@ export default function TeamPanel({
           <h2 id="team-h" className="text-sm font-semibold">Tim &amp; Pembina</h2>
           <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11px] font-semibold text-white/70">
             {team.length}/{MAX_TEAM} Anggota
+          </span>
+          <span className={`text-[11px] ${cloud.mode === "off" ? "text-warn" : cloud.status === "error" ? "text-danger" : "text-white/45"}`} role="status">
+            {cloudLabel}
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -57,6 +87,9 @@ export default function TeamPanel({
           </span>
           <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={copyCode}>
             <Link2 size={14} /> {copied ? "Tersalin!" : "📋 Salin Kode"}
+          </button>
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={copyLink}>
+            <Share2 size={14} /> {linkCopied ? "Link tersalin!" : "🔗 Salin Link Undangan"}
           </button>
           {!finished && (
             <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setInvite(true)} disabled={full} title={full ? `Tim penuh (maksimal ${MAX_TEAM} anggota)` : undefined}>
