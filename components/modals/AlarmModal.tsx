@@ -8,10 +8,11 @@ import { useStore } from "@/lib/store";
 import { Badge, Modal } from "../ui";
 
 /**
- * Persistent ringing alarm. The modal cannot be dismissed — the only way to stop the sound is
+ * Persistent ringing alarm. A real alarm cannot be dismissed — the only way to stop the sound is
  * "Konfirmasi Selesai", which hands over to the completion flow (Stop-on-Confirm).
+ * A test alarm (button "Uji Alarm") is only a sound check, so it can be closed freely.
  */
-export default function AlarmModal({ taskId, onConfirm }: { taskId: string | null; onConfirm: (taskId: string) => void }) {
+export default function AlarmModal({ taskId, isTest, onClose, onConfirm }: { taskId: string | null; isTest: boolean; onClose: () => void; onConfirm: (taskId: string) => void }) {
   const { data, now } = useStore();
   const task = data.tasks.find((t) => t.id === taskId);
   const comp = data.competitions.find((c) => c.id === task?.competitionId);
@@ -28,7 +29,7 @@ export default function AlarmModal({ taskId, onConfirm }: { taskId: string | nul
   }, [ringing, task?.id]);
 
   return (
-    <Modal open={ringing} locked title="⏰ ALARM TENGGAT">
+    <Modal open={ringing} locked={!isTest} onClose={onClose} title={isTest ? "⏰ UJI ALARM" : "⏰ ALARM TENGGAT"}>
       {task && (
         <div className="p-6 text-center">
           <div className="mx-auto grid h-20 w-20 animate-pulseGlow place-items-center rounded-full bg-danger/20 text-danger">
@@ -42,12 +43,21 @@ export default function AlarmModal({ taskId, onConfirm }: { taskId: string | nul
           </div>
           <h3 className="mt-3 text-xl font-bold">{task.title}</h3>
           <p className="mt-1 text-sm text-white/60">Tenggat: {fmtDateTime(task.dueDate)}</p>
+          {isTest ? (
+            <p className="mx-auto mt-4 max-w-sm rounded-xl bg-active/10 px-3 py-2 text-xs text-active">Ini hanya uji suara. Tugas dan pengingat kalender Anda tidak berubah.</p>
+          ) : (
           <p className="mx-auto mt-4 max-w-sm text-xs text-white/50">
             Alarm dan pengingat kalender (Google/Outlook) hanya berhenti setelah Anda menandai tugas selesai dan melampirkan tautan bukti
             (OneDrive/Google Drive).
           </p>
+          )}
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <button className="btn-danger px-5 py-3 text-base" onClick={() => onConfirm(task.id)}>
+            {isTest && (
+              <button className="btn-primary px-5 py-3 text-base" onClick={onClose}>
+                Tutup uji alarm
+              </button>
+            )}
+            <button className={isTest ? "btn-ghost" : "btn-danger px-5 py-3 text-base"} onClick={() => onConfirm(task.id)}>
               <CheckCircle2 size={18} /> Konfirmasi Selesai (Upload Bukti)
             </button>
             <button className="btn-ghost" onClick={() => alarm.muteFor(60_000)}>

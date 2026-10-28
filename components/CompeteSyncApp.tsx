@@ -41,6 +41,7 @@ function Shell() {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [ringingId, setRingingId] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false); // the ringing alarm was started by "Uji Alarm"
   const [armed, setArmed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState<Theme>("light");
@@ -91,6 +92,7 @@ function Shell() {
       .filter((t) => t.assignedTo === me && isAlarming(t, now))
       .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))[0];
     setRingingId(next ? next.id : null);
+    setTesting(false); // a finished test is over; whatever rings next is a real alarm
   }, [armed, now, data.tasks, me, ringingId]);
 
   async function arm() {
@@ -107,6 +109,7 @@ function Shell() {
 
   function testAlarm(taskId: string) {
     alarm.unlock();
+    setTesting(true);
     setRingingId(taskId);
   }
 
@@ -246,7 +249,16 @@ function Shell() {
         </div>
       </nav>
 
-      <AlarmModal taskId={ringingId} onConfirm={setCompleteId} />
+      <AlarmModal
+        taskId={ringingId}
+        isTest={testing}
+        onClose={() => {
+          setRingingId(null);
+          setTesting(false);
+          alarm.stop();
+        }}
+        onConfirm={setCompleteId}
+      />
       <CompleteModal taskId={completeId} onClose={() => setCompleteId(null)} />
       <ReportModal competitionId={reportId} onClose={() => setReportId(null)} />
       <EditCompetitionModal competitionId={editId} onClose={() => setEditId(null)} />

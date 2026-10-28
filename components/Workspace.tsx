@@ -43,6 +43,8 @@ export default function Workspace({
   const tasks = data.tasks.filter((t) => t.competitionId === competitionId);
   const stages = data.stages.filter((s) => s.competitionId === competitionId).sort((a, b) => a.orderIndex - b.orderIndex);
   const activeStage = stages.find((s) => s.status === "active");
+  // The countdown that matters is the running round, not the final deadline weeks later.
+  const stageDays = activeStage ? Math.ceil((new Date(activeStage.deadline).getTime() - now) / DAY) : null;
   const sel: Stage | undefined = stages.find((s) => s.id === stageSel) ?? activeStage ?? stages[stages.length - 1];
   const finished = comp.status === "archived";
   const evaluation = data.evaluations.find((e) => e.competitionId === competitionId);
@@ -104,7 +106,18 @@ export default function Workspace({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="active">{comp.category}</Badge>
-              <Badge tone={daysLeft <= 3 ? "danger" : daysLeft <= 7 ? "warn" : "safe"}>{daysLeft} hari menuju deadline</Badge>
+              {comp.status === "archived" ? (
+                <Badge tone="neutral">Lomba selesai</Badge>
+              ) : activeStage && stageDays !== null ? (
+                <>
+                  <Badge tone={stageDays <= 3 ? "danger" : stageDays <= 7 ? "warn" : "safe"}>
+                    {stageDays <= 0 ? "Tenggat" : `${stageDays} hari menuju`} {activeStage.name}
+                  </Badge>
+                  {stages.length > 1 && <Badge tone="neutral">Final {daysLeft} hari lagi</Badge>}
+                </>
+              ) : (
+                <Badge tone={daysLeft <= 3 ? "danger" : daysLeft <= 7 ? "warn" : "safe"}>{daysLeft} hari menuju deadline</Badge>
+              )}
               {myRole && <Badge tone="neutral">Peran Anda: {myRole === "leader" ? "Ketua" : "Anggota"}{myMember?.teamRole ? ` · ${myMember.teamRole}` : ""}</Badge>}
             </div>
             <h1 className="mt-1.5 text-xl font-bold sm:text-2xl">{comp.title}</h1>

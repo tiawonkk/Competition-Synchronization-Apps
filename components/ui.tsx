@@ -106,7 +106,7 @@ export function Modal({
           className="fixed inset-0 z-50 grid place-items-end bg-slate-900/45 p-0 sm:place-items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          exit={{ opacity: 0, pointerEvents: "none" }} // a fading overlay must never swallow clicks
           onClick={locked ? undefined : onClose}
         >
           <motion.div

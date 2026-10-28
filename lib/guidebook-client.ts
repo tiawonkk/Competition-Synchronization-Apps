@@ -13,7 +13,7 @@ export interface Progress {
  */
 export async function analyzeGuidebook({ file, text, onProgress }: { file?: File; text?: string; onProgress?: (p: Progress) => void }): Promise<{ draft?: GuidebookDraft; error?: string; note?: string }> {
   // Plain-text guidebooks (.txt / .md) need no PDF parsing.
-  if (file && (file.type === "text/plain" || /.(txt|md)$/i.test(file.name))) return analyzeGuidebook({ text: await file.text(), onProgress });
+  if (file && (file.type === "text/plain" || /\.(txt|md)$/i.test(file.name))) return analyzeGuidebook({ text: await file.text(), onProgress });
   let note: string | undefined;
   let via = ""; // what was actually sent, shown with errors so a failed upload can be diagnosed
   const kb = (n: number) => (n >= 1024 * 1024 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
