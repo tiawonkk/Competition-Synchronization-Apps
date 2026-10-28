@@ -299,10 +299,10 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
             <label className="label" htmlFor="c-gb">Guidebook lomba (opsional)</label>
             <label className="btn-ghost w-full cursor-pointer !justify-start">
               {reading ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-              <span className="min-w-0 truncate">{fileName || "Unggah PDF guidebook"}</span>
+              <span className="min-w-0 truncate">{fileName || "Unggah guidebook (PDF, TXT, atau MD)"}</span>
               <input
                 type="file"
-                accept="application/pdf"
+                accept="application/pdf,.txt,.md,text/plain"
                 className="sr-only"
                 disabled={reading}
                 onChange={(e) => {

@@ -72,10 +72,10 @@ export default function GuidebookReaderModal({ open, competitionId, onClose }: {
 
         <label className={`btn-ghost w-full cursor-pointer !justify-start ${busy ? "pointer-events-none opacity-60" : ""}`}>
           {busy ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-          <span className="min-w-0 truncate">{fileName || "Unggah PDF guidebook (ukuran berapa pun)"}</span>
+          <span className="min-w-0 truncate">{fileName || "Unggah guidebook (PDF, TXT, atau MD)"}</span>
           <input
             type="file"
-            accept="application/pdf"
+            accept="application/pdf,.txt,.md,text/plain"
             className="sr-only"
             onChange={(e) => {
               const f = e.target.files?.[0];

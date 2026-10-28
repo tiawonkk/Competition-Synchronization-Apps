@@ -139,21 +139,35 @@ export async function POST(req: NextRequest) {
       generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.1 },
     });
     const deadline = AbortSignal.timeout(50_000);
+    // Try each model in turn. 404 = id not available to this key; 429 = that model's free quota is used up;
+    // 500/503/504 = Google is overloaded right now. Quotas and load are per model, so the next one may work.
+    const RETRY = new Set([404, 429, 500, 503, 504]);
+    const tried: string[] = [];
     let res: Response | null = null;
-    for (const model of MODELS) {
-      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: payload,
-        signal: deadline,
-      });
-      if (res.status !== 404) break; // 404 = this model id is not available to the key: try the next one
+    for (let pass = 0; pass < 2 && !res?.ok; pass++) {
+      if (pass === 1) {
+        // Everything failed: wait briefly and go once more only if the cause may be transient overload.
+        if (!tried.some((t) => /:(500|503|504)$/.test(t))) break;
+        await new Promise((r) => setTimeout(r, 2500));
+      }
+      for (const model of MODELS) {
+        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body: payload,
+          signal: deadline,
+        });
+        tried.push(`${model}:${res.status}`);
+        if (res.ok || !RETRY.has(res.status)) break;
+      }
     }
     if (!res || !res.ok) {
       const code = res?.status ?? 0;
-      if (code === 429) return NextResponse.json({ error: "Kuota gratis Gemini sedang habis. Coba lagi nanti." }, { status: 429 });
-      const hint = code === 404 ? " Tidak ada model yang tersedia untuk kunci ini; isi GEMINI_MODEL dengan model yang tampil di Google AI Studio." : "";
-      return NextResponse.json({ error: `Gemini menolak permintaan (${code}).${hint}` }, { status: 502 });
+      const detail = ` Dicoba: ${tried.join(", ")}.`;
+      if (tried.length > 0 && tried.every((t) => t.endsWith(":429"))) return NextResponse.json({ error: `Kuota gratis Gemini sedang habis. Coba lagi nanti.${detail}` }, { status: 429 });
+      const hint =
+        tried.every((t) => t.endsWith(":404")) ? " Tidak ada model yang tersedia untuk kunci ini; isi GEMINI_MODEL dengan model yang tampil di Google AI Studio." : tried.some((t) => /:(500|503|504)$/.test(t)) ? " Server Gemini sedang sibuk, coba lagi sebentar lagi." : "";
+      return NextResponse.json({ error: `Gemini menolak permintaan (${code}).${hint}${detail}` }, { status: 502 });
     }
     const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const out = body.candidates?.[0]?.content?.parts?.[0]?.text;
