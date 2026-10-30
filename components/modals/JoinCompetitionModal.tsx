@@ -2,7 +2,7 @@
 
 import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CLOUD_ERROR_TEXT } from "@/lib/cloud";
+import { CLOUD_ERROR_TEXT, CLOUD_PROBLEM_TEXT } from "@/lib/cloud";
 import { normalizeInviteCode } from "@/lib/logic";
 import { TEAM_ROLES } from "@/lib/seed";
 import { useStore } from "@/lib/store";
@@ -104,7 +104,7 @@ export default function JoinCompetitionModal({
         )}
         {cloud.mode === "off" && (
           <p className="rounded-xl bg-warn/10 px-3 py-2 text-xs text-warn">
-            Cloud belum aktif di server ini, jadi lomba hanya dikenali di browser tempat ia dibuat. Untuk bergabung dari perangkat lain, pakai <strong>Link Undangan</strong> dari kartu Tim milik Ketua.
+            {cloud.problem ? CLOUD_PROBLEM_TEXT[cloud.problem] : "Cloud belum aktif di server ini."} Sampai itu beres, lomba hanya dikenali di browser tempat ia dibuat. Untuk bergabung dari perangkat lain, pakai <strong>Link Undangan</strong> dari kartu Tim milik Ketua.
           </p>
         )}
 

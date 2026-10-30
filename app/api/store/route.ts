@@ -29,12 +29,29 @@ function throttled(ip: string, limit = 240): boolean {
 }
 
 const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
+
+/** Turns a database error into a short, non-sensitive reason the app can explain to the user. */
+function classify(e: unknown): "tables_missing" | "bad_key" | "db_error" {
+  const msg = String((e as Error)?.message ?? e).toLowerCase();
+  if (msg.includes("cs_rooms") || msg.includes("cs_events") || msg.includes("schema cache") || msg.includes("does not exist")) return "tables_missing";
+  if (msg.includes("api key") || msg.includes("jwt") || msg.includes("invalid") || msg.includes("unauthorized")) return "bad_key";
+  return "db_error";
+}
 const clientIp = (req: NextRequest) => req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 
 export async function GET(req: NextRequest) {
   const store = getStore();
   const url = req.nextUrl.searchParams;
-  if (url.get("status")) return NextResponse.json({ enabled: !!store, mode: store?.mode ?? "off" });
+  if (url.get("status")) {
+    if (!store) return NextResponse.json({ enabled: false, mode: "off" });
+    // "Configured" is not "ready": probe the tables so a missing SQL step is reported instead of failing silently later.
+    try {
+      await store.roomByCode("__health__");
+      return NextResponse.json({ enabled: true, mode: store.mode });
+    } catch (e) {
+      return NextResponse.json({ enabled: false, mode: store.mode, problem: classify(e) });
+    }
+  }
   if (!store) return fail("off", 503);
   if (throttled(clientIp(req))) return fail("rate_limited", 429);
 

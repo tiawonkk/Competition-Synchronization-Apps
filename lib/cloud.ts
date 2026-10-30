@@ -24,10 +24,19 @@ async function call<T>(url: string, init?: RequestInit): Promise<CloudResult<T>>
   }
 }
 
-export async function fetchStatus(): Promise<Exclude<CloudMode, "checking">> {
-  const r = await call<{ enabled: boolean; mode: "supabase" | "memory" | "off" }>("/api/store?status=1");
-  return r.ok && r.data.enabled ? r.data.mode : "off";
+export type CloudProblem = "tables_missing" | "bad_key" | "db_error";
+
+export async function fetchStatus(): Promise<{ mode: Exclude<CloudMode, "checking">; problem?: CloudProblem }> {
+  const r = await call<{ enabled: boolean; mode: "supabase" | "memory" | "off"; problem?: CloudProblem }>("/api/store?status=1");
+  if (!r.ok) return { mode: "off" };
+  return r.data.enabled ? { mode: r.data.mode } : { mode: "off", problem: r.data.problem };
 }
+
+export const CLOUD_PROBLEM_TEXT: Record<CloudProblem, string> = {
+  tables_missing: "Server cloud terhubung ke Supabase, tetapi tabelnya belum dibuat. Jalankan supabase/schema_cloud_sync.sql di SQL Editor.",
+  bad_key: "Kunci Supabase di server ditolak. Periksa SUPABASE_SERVICE_ROLE_KEY dan NEXT_PUBLIC_SUPABASE_URL di Vercel, lalu Redeploy.",
+  db_error: "Server cloud tidak bisa membaca database Supabase. Periksa pengaturan di Vercel.",
+};
 
 const post = <T,>(body: object) => call<T>("/api/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 

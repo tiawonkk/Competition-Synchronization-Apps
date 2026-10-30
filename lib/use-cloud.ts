@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { applyOps, diffRoom, fullOps, type Op } from "./cloud-ops";
-import { cloudJoin, cloudPull, cloudPush, fetchStatus, type CloudError, type CloudMode } from "./cloud";
+import { cloudJoin, cloudPull, cloudPush, fetchStatus, type CloudError, type CloudMode, type CloudProblem } from "./cloud";
 import { uid } from "./logic";
 import type { AppData } from "./seed";
 import type { Competition } from "./types";
@@ -19,6 +19,8 @@ export type JoinInfo = { ok: true; roomId: string; title: string; memberIds: str
 
 export interface CloudInfo {
   mode: CloudMode;
+  /** Why cloud sync is off although the server is configured (for example the SQL was not run). */
+  problem?: CloudProblem;
   status: "idle" | "syncing" | "error";
   rooms: number;
   /** Fetches a room by invite code, merges it into local state and starts syncing it. */
@@ -44,6 +46,7 @@ function loadRooms(): Record<string, RoomMeta> {
  */
 export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roomId: string) => void): CloudInfo {
   const [mode, setMode] = useState<CloudMode>("checking");
+  const [problem, setProblem] = useState<CloudProblem | undefined>();
   const [status, setStatus] = useState<CloudInfo["status"]>("idle");
   const [rooms, setRooms] = useState(0);
   const clientId = useRef(uid("c"));
@@ -67,7 +70,10 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
   useEffect(() => {
     meta.current = loadRooms();
     setRooms(Object.keys(meta.current).length);
-    fetchStatus().then(setMode);
+    fetchStatus().then((s) => {
+      setMode(s.mode);
+      setProblem(s.problem);
+    });
   }, []);
 
   const flush = useCallback(async () => {
@@ -241,5 +247,5 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     [importRoom, persist],
   );
 
-  return { mode, status, rooms, joinByCode, importRoom };
+  return { mode, problem, status, rooms, joinByCode, importRoom };
 }

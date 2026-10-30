@@ -59,7 +59,11 @@ export default function TeamPanel({
 
   const cloudLabel =
     cloud.mode === "off"
-      ? "☁️ Cloud belum aktif · data hanya di browser ini"
+      ? cloud.problem === "tables_missing"
+        ? "☁️ Cloud belum siap · jalankan schema_cloud_sync.sql di Supabase"
+        : cloud.problem
+          ? "☁️ Cloud bermasalah · periksa kunci Supabase di Vercel"
+          : "☁️ Cloud belum aktif · data hanya di browser ini"
       : cloud.mode === "checking"
         ? "☁️ Memeriksa cloud…"
         : cloud.status === "syncing"
