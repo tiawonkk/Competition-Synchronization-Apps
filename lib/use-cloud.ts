@@ -21,6 +21,8 @@ export interface CloudInfo {
   mode: CloudMode;
   /** Why cloud sync is off although the server is configured (for example the SQL was not run). */
   problem?: CloudProblem;
+  /** The database's own error message, when the check failed. */
+  detail?: string;
   status: "idle" | "syncing" | "error";
   rooms: number;
   /** Fetches a room by invite code, merges it into local state and starts syncing it. */
@@ -47,6 +49,7 @@ function loadRooms(): Record<string, RoomMeta> {
 export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roomId: string) => void): CloudInfo {
   const [mode, setMode] = useState<CloudMode>("checking");
   const [problem, setProblem] = useState<CloudProblem | undefined>();
+  const [detail, setDetail] = useState<string | undefined>();
   const [status, setStatus] = useState<CloudInfo["status"]>("idle");
   const [rooms, setRooms] = useState(0);
   const clientId = useRef(uid("c"));
@@ -73,6 +76,7 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     fetchStatus().then((s) => {
       setMode(s.mode);
       setProblem(s.problem);
+      setDetail(s.detail);
     });
   }, []);
 
@@ -103,6 +107,10 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
             }
             failed = true;
             break;
+          }
+          if (r.data && typeof r.data.head === "number" && r.data.head > room.seq) {
+            room.seq = r.data.head;
+            persist();
           }
           queue.current[roomId] = queue.current[roomId].slice(chunk.length);
         }
@@ -142,11 +150,14 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     const fresh = new Set<string>();
     for (const c of data.competitions) {
       if (meta.current[c.id]) continue;
+      const isMember = data.members.some((m) => m.competitionId === c.id && m.userId === me);
+      if (!isMember) continue;
       const leads = data.members.some((m) => m.competitionId === c.id && m.userId === me && m.role === "leader");
-      if (!leads) continue;
       meta.current[c.id] = { code: c.inviteCode, seq: 0 };
-      queue.current[c.id] = fullOps(data, c.id);
-      fresh.add(c.id);
+      if (leads) {
+        queue.current[c.id] = fullOps(data, c.id);
+        fresh.add(c.id);
+      }
       dirty = true;
     }
     for (const id of Object.keys(meta.current)) {
@@ -210,8 +221,14 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     (ops: Op[], roomId: string) => {
       prev.current = applyOps(prev.current, ops, roomId);
       applyRemote(ops, roomId);
+      const compOp = [...ops].reverse().find((o) => o.k === "competition" && o.v);
+      const comp = compOp?.v as unknown as Competition | undefined;
+      if (comp && !meta.current[roomId]) {
+        meta.current[roomId] = { code: comp.inviteCode, seq: 0 };
+        persist();
+      }
     },
-    [applyRemote],
+    [applyRemote, persist],
   );
 
   const joinByCode = useCallback(
@@ -247,5 +264,5 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     [importRoom, persist],
   );
 
-  return { mode, problem, status, rooms, joinByCode, importRoom };
+  return { mode, problem, detail, status, rooms, joinByCode, importRoom };
 }

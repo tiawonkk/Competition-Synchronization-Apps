@@ -80,7 +80,7 @@ export default function TeamPanel({
           <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11px] font-semibold text-white/70">
             {team.length}/{MAX_TEAM} Anggota
           </span>
-          <span className={`text-[11px] ${cloud.mode === "off" ? "text-warn" : cloud.status === "error" ? "text-danger" : "text-white/45"}`} role="status">
+          <span className={`text-[11px] ${cloud.mode === "off" ? "text-warn" : cloud.status === "error" ? "text-danger" : "text-white/45"}`} role="status" title={cloud.detail}>
             {cloudLabel}
           </span>
         </div>
@@ -105,13 +105,16 @@ export default function TeamPanel({
 
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {team.map((m) => {
-          const u = data.users.find((x) => x.id === m.userId);
-          if (!u) return null;
+          const u = data.users.find((x) => x.id === m.userId) ?? {
+            id: m.userId,
+            fullName: m.userId === me ? "Saya" : m.teamRole ? `Anggota (${m.teamRole})` : "Anggota Tim",
+            color: "#6366F1",
+          };
           const active = assignee === u.id;
           const canEditRole = !finished && (isLeader || m.userId === me);
           const roles = m.teamRole && !(TEAM_ROLES as readonly string[]).includes(m.teamRole) ? [m.teamRole, ...TEAM_ROLES] : TEAM_ROLES;
           return (
-            <li key={u.id} className={`rounded-2xl border p-3 transition ${active ? "border-active bg-active/[0.06]" : "border-white/10 bg-white/[0.03]"}`}>
+            <li key={m.userId} className={`rounded-2xl border p-3 transition ${active ? "border-active bg-active/[0.06]" : "border-white/10 bg-white/[0.03]"}`}>
               <div className="flex items-start gap-2">
                 <button
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"

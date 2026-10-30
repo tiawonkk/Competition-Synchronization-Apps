@@ -38,7 +38,35 @@ export default function Workspace({
   const { data, now, me, readiness, dispatch } = useStore();
   const [assignee, setAssignee] = useState<string>("all");
   const [showDone, setShowDone] = useState(true);
-  const [tab, setTab] = useState<"tasks" | "board" | "vault">("tasks");
+  const [tab, setTabState] = useState<"tasks" | "board" | "vault">(() => {
+    if (typeof window === "undefined") return "tasks";
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab");
+      if (t === "tasks" || t === "board" || t === "vault") return t;
+      const saved = localStorage.getItem(`cs-tab-${competitionId}`);
+      if (saved === "tasks" || saved === "board" || saved === "vault") return saved;
+    } catch {
+      /* ignore */
+    }
+    return "tasks";
+  });
+
+  const setTab = (next: "tasks" | "board" | "vault") => {
+    setTabState(next);
+    try {
+      localStorage.setItem(`cs-tab-${competitionId}`, next);
+      const url = new URL(window.location.href);
+      if (next === "tasks") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", next);
+      }
+      window.history.replaceState(null, "", url.toString());
+    } catch {
+      /* ignore */
+    }
+  };
   const [copied, setCopied] = useState(false);
   const [stageSel, setStageSel] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<string | null>(null); // "YYYY-MM-DD" picked on the calendar

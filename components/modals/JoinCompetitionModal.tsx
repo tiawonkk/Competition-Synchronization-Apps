@@ -104,7 +104,7 @@ export default function JoinCompetitionModal({
         )}
         {cloud.mode === "off" && (
           <p className="rounded-xl bg-warn/10 px-3 py-2 text-xs text-warn">
-            {cloud.problem ? CLOUD_PROBLEM_TEXT[cloud.problem] : "Cloud belum aktif di server ini."} Sampai itu beres, lomba hanya dikenali di browser tempat ia dibuat. Untuk bergabung dari perangkat lain, pakai <strong>Link Undangan</strong> dari kartu Tim milik Ketua.
+            {cloud.problem ? CLOUD_PROBLEM_TEXT[cloud.problem] : "Cloud belum aktif di server ini."}{cloud.detail ? ` (${cloud.detail})` : ""} Sampai itu beres, lomba hanya dikenali di browser tempat ia dibuat. Untuk bergabung dari perangkat lain, pakai <strong>Link Undangan</strong> dari kartu Tim milik Ketua.
           </p>
         )}
 

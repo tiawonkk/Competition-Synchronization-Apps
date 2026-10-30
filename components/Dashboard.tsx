@@ -221,9 +221,10 @@ export default function Dashboard({
                       {tasks.filter((t) => t.isCompleted).length}/{tasks.length} tugas · {left} hari lagi
                     </div>
                     <div className="mt-2 flex -space-x-2">
-                      {team.map((m) => (
-                        <Avatar key={m.userId} user={data.users.find((u) => u.id === m.userId)!} size={24} />
-                      ))}
+                      {team.map((m) => {
+                        const u = data.users.find((u) => u.id === m.userId) ?? { id: m.userId, fullName: "Anggota", color: "#6366F1" };
+                        return <Avatar key={m.userId} user={u} size={24} />;
+                      })}
                     </div>
                   </div>
                   <ArrowRight size={16} className="text-white/30 transition group-hover:translate-x-1 group-hover:text-white/70" />

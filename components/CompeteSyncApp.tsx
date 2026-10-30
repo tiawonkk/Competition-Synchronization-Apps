@@ -1,7 +1,7 @@
 "use client";
 
 import { BellRing, History, KeyRound, LayoutDashboard, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Sun, Trophy, Volume2, VolumeX } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { alarm, requestNotificationPermission } from "@/lib/alarm";
 import { captureJoinHash, decodeSnapshot, takePendingJoin } from "@/lib/join-link";
 import { isAlarming, scoreTone, userEmail } from "@/lib/logic";
@@ -24,6 +24,30 @@ import { Avatar, TONE } from "./ui";
 type View = { kind: "dashboard" } | { kind: "history" } | { kind: "competition"; id: string };
 type Theme = "light" | "dark";
 
+const VIEW_STORAGE_KEY = "cs-view-v1";
+
+function readInitialView(): View {
+  if (typeof window === "undefined") return { kind: "dashboard" };
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const compId = params.get("competition") || params.get("comp");
+    if (compId) return { kind: "competition", id: compId };
+    if (params.get("view") === "history" || window.location.hash === "#history") {
+      return { kind: "history" };
+    }
+    const saved = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as View;
+      if (parsed && (parsed.kind === "dashboard" || parsed.kind === "history" || (parsed.kind === "competition" && parsed.id))) {
+        return parsed;
+      }
+    }
+  } catch {
+    /* fallback */
+  }
+  return { kind: "dashboard" };
+}
+
 /** Auth gate: login screen until a session exists, then the app shell (re-mounted per user so view state never leaks between accounts). */
 export default function CompeteSyncApp() {
   const { data } = useStore();
@@ -33,7 +57,46 @@ export default function CompeteSyncApp() {
 /** Top-level shell: adaptive theme, collapsible sidebar (desktop), bottom bar (mobile) and global modals. */
 function Shell() {
   const { data, now, me, myCompetitions, dispatch, readiness, cloud } = useStore();
-  const [view, setView] = useState<View>({ kind: "dashboard" });
+  const [view, setViewState] = useState<View>(readInitialView);
+
+  const setView = useCallback((next: View) => {
+    setViewState(next);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify(next));
+      const url = new URL(window.location.href);
+      if (next.kind === "competition") {
+        url.searchParams.set("comp", next.id);
+        url.searchParams.delete("view");
+      } else if (next.kind === "history") {
+        url.searchParams.set("view", "history");
+        url.searchParams.delete("comp");
+        url.searchParams.delete("competition");
+      } else {
+        url.searchParams.delete("comp");
+        url.searchParams.delete("competition");
+        url.searchParams.delete("view");
+      }
+      window.history.replaceState(null, "", url.toString());
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Listen to browser Back/Forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      setViewState(readInitialView());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // If viewing a competition that no longer exists, smoothly fallback to dashboard
+  useEffect(() => {
+    if (view.kind === "competition" && data.competitions.length > 0 && !data.competitions.some((c) => c.id === view.id)) {
+      setView({ kind: "dashboard" });
+    }
+  }, [view, data.competitions, setView]);
   const [completeId, setCompleteId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);

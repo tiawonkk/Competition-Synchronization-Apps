@@ -49,7 +49,10 @@ export async function GET(req: NextRequest) {
       await store.roomByCode("__health__");
       return NextResponse.json({ enabled: true, mode: store.mode });
     } catch (e) {
-      return NextResponse.json({ enabled: false, mode: store.mode, problem: classify(e) });
+      const msg = String((e as Error)?.message ?? e);
+      console.error("[api/store] health check failed:", msg); // visible in Vercel -> Logs
+      // The message comes from the database client and carries no keys; it is shown so a failure can be diagnosed.
+      return NextResponse.json({ enabled: false, mode: store.mode, problem: classify(e), detail: msg.slice(0, 160) });
     }
   }
   if (!store) return fail("off", 503);
@@ -62,7 +65,8 @@ export async function GET(req: NextRequest) {
     const room = await store.roomByCode(code);
     if (!room) return fail("not_found", 404);
     return NextResponse.json({ roomId: room.id, ...(await store.since(room.id, since)) });
-  } catch {
+  } catch (e) {
+    console.error("[api/store] request failed:", String((e as Error)?.message ?? e));
     return fail("server_error", 500);
   }
 }
@@ -103,7 +107,8 @@ export async function POST(req: NextRequest) {
     if (!ops) return fail("bad_request", 400);
     const head = await store.append(roomId, clientId, ops);
     return NextResponse.json({ head });
-  } catch {
+  } catch (e) {
+    console.error("[api/store] request failed:", String((e as Error)?.message ?? e));
     return fail("server_error", 500);
   }
 }

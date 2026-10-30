@@ -26,10 +26,10 @@ async function call<T>(url: string, init?: RequestInit): Promise<CloudResult<T>>
 
 export type CloudProblem = "tables_missing" | "bad_key" | "db_error";
 
-export async function fetchStatus(): Promise<{ mode: Exclude<CloudMode, "checking">; problem?: CloudProblem }> {
-  const r = await call<{ enabled: boolean; mode: "supabase" | "memory" | "off"; problem?: CloudProblem }>("/api/store?status=1");
+export async function fetchStatus(): Promise<{ mode: Exclude<CloudMode, "checking">; problem?: CloudProblem; detail?: string }> {
+  const r = await call<{ enabled: boolean; mode: "supabase" | "memory" | "off"; problem?: CloudProblem; detail?: string }>("/api/store?status=1");
   if (!r.ok) return { mode: "off" };
-  return r.data.enabled ? { mode: r.data.mode } : { mode: "off", problem: r.data.problem };
+  return r.data.enabled ? { mode: r.data.mode } : { mode: "off", problem: r.data.problem, detail: r.data.detail };
 }
 
 export const CLOUD_PROBLEM_TEXT: Record<CloudProblem, string> = {
