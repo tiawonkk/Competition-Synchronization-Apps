@@ -1,9 +1,11 @@
 "use client";
 
-import { Copy, GraduationCap, Link2, Mail, Pencil, Send, Share2, Trash2, UserPlus } from "lucide-react";
+import { Copy, GraduationCap, Link2, Mail, Pencil, RotateCw, Send, Share2, Trash2, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useConfirm } from "./ConfirmDialog";
 import { fullOps } from "@/lib/cloud-ops";
 import { buildJoinLink } from "@/lib/join-link";
+import { makeInviteCode } from "@/lib/logic";
 import { isEmail } from "@/lib/passwords";
 import { TEAM_ROLES } from "@/lib/seed";
 import { useStore } from "@/lib/store";
@@ -24,6 +26,7 @@ export default function TeamPanel({
   onReport: () => void;
 }) {
   const { data, me, dispatch, cloud } = useStore();
+  const confirm = useConfirm();
   const comp = data.competitions.find((c) => c.id === competitionId)!;
   const team = data.members.filter((m) => m.competitionId === competitionId && m.role !== "advisor");
   const isLeader = team.some((m) => m.userId === me && m.role === "leader");
@@ -32,7 +35,17 @@ export default function TeamPanel({
   const [linkCopied, setLinkCopied] = useState(false);
   const [invite, setInvite] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const full = team.length >= MAX_TEAM;
+
+  async function handleSyncNow() {
+    setSyncing(true);
+    try {
+      await cloud.syncNow();
+    } finally {
+      setTimeout(() => setSyncing(false), 500);
+    }
+  }
 
   async function copyCode() {
     try {
@@ -57,6 +70,13 @@ export default function TeamPanel({
     }
   }
 
+  const conflict = cloud.conflicts[competitionId] === comp.inviteCode;
+
+  function newCode() {
+    const inviteCode = makeInviteCode(comp.title, [...data.competitions.map((c) => c.inviteCode), comp.inviteCode]);
+    dispatch({ type: "updateCompetition", id: competitionId, patch: { inviteCode } });
+  }
+
   const cloudLabel =
     cloud.mode === "off"
       ? cloud.problem === "tables_missing"
@@ -66,11 +86,15 @@ export default function TeamPanel({
           : "☁️ Cloud belum aktif · data hanya di browser ini"
       : cloud.mode === "checking"
         ? "☁️ Memeriksa cloud…"
-        : cloud.status === "syncing"
-          ? "☁️ Menyimpan…"
-          : cloud.status === "error"
-            ? "☁️ Gagal sinkron, mencoba lagi"
-            : "☁️ Tersinkron ke cloud";
+        : conflict
+          ? "☁️ Tidak tersinkron · kode dipakai tim lain"
+          : cloud.status === "syncing"
+            ? "☁️ Menyimpan…"
+            : cloud.status === "error"
+              ? "☁️ Gagal sinkron, mencoba lagi"
+              : cloud.mode === "memory"
+                ? "🧪 Server lokal (tanpa Supabase) · hanya perangkat yang membuka server ini"
+                : "☁️ Tersinkron ke cloud";
 
   return (
     <section className="card p-4 sm:p-5" aria-labelledby="team-h">
@@ -80,9 +104,24 @@ export default function TeamPanel({
           <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11px] font-semibold text-white/70">
             {team.length}/{MAX_TEAM} Anggota
           </span>
-          <span className={`text-[11px] ${cloud.mode === "off" ? "text-warn" : cloud.status === "error" ? "text-danger" : "text-white/45"}`} role="status" title={cloud.detail}>
+          <span
+            className={`text-[11px] ${cloud.mode === "off" || cloud.mode === "memory" ? "text-warn" : cloud.status === "error" || conflict ? "text-danger" : "text-white/45"}`}
+            role="status"
+            title={cloud.detail}
+          >
             {cloudLabel}
           </span>
+          {(cloud.mode === "supabase" || cloud.mode === "memory") && (
+            <button
+              onClick={handleSyncNow}
+              disabled={syncing || cloud.status === "syncing"}
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] text-white/70 hover:bg-white/[0.08] hover:text-white transition disabled:opacity-50"
+              title="Periksa dan tarik perubahan terbaru dari cloud sekarang"
+            >
+              <RotateCw size={11} className={syncing || cloud.status === "syncing" ? "animate-spin text-active" : ""} />
+              <span>{syncing || cloud.status === "syncing" ? "Menyinkronkan…" : "Segarkan"}</span>
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <span className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs">
@@ -102,6 +141,20 @@ export default function TeamPanel({
           )}
         </div>
       </div>
+
+      {conflict && (
+        <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+          <span>
+            Kode <strong className="font-mono">{comp.inviteCode}</strong> sudah dipakai lomba lain di cloud, jadi lomba ini belum tersinkron dan anggota yang memakai kode itu masuk ke lomba yang berbeda.
+            {isLeader ? " Buat kode baru lalu bagikan ulang." : " Minta Ketua membuat kode baru."}
+          </span>
+          {isLeader && (
+            <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={newCode}>
+              Buat Kode Baru
+            </button>
+          )}
+        </div>
+      )}
 
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {team.map((m) => {
@@ -135,8 +188,16 @@ export default function TeamPanel({
                 {isLeader && m.role !== "leader" && !finished && (
                   <button
                     className="rounded-lg p-1.5 text-white/35 hover:bg-danger/15 hover:text-danger"
-                    onClick={() => {
-                      if (window.confirm(`Keluarkan ${u.fullName} dari tim? Tugas terbukanya dialihkan ke Ketua.`)) dispatch({ type: "removeMember", competitionId, userId: u.id });
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: `Keluarkan ${u.fullName}?`,
+                        item: u.fullName,
+                        message: "Tugas terbukanya akan dialihkan ke Ketua tim. Anggota ini tidak akan lagi memiliki akses ke lomba.",
+                        confirmLabel: "Keluarkan Anggota",
+                        tone: "danger",
+                        icon: "user",
+                      });
+                      if (ok) dispatch({ type: "removeMember", competitionId, userId: u.id });
                     }}
                     aria-label={`Keluarkan ${u.fullName}`}
                     title="Keluarkan dari tim"

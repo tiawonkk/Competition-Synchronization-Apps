@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { dayKey, fromLocalInput, toLocalInput, uid } from "@/lib/logic";
 import { useStore } from "@/lib/store";
+import { useConfirm } from "../ConfirmDialog";
 import { Modal } from "../ui";
 
 export interface MilestoneFormCtx {
@@ -15,6 +16,7 @@ export interface MilestoneFormCtx {
 /** Add or edit a milestone (an internal checkpoint inside a stage). */
 export default function MilestoneFormModal({ ctx, onClose }: { ctx: MilestoneFormCtx | null; onClose: () => void }) {
   const { data, dispatch } = useStore();
+  const confirm = useConfirm();
   const ms = ctx?.milestoneId ? data.milestones.find((m) => m.id === ctx.milestoneId) : undefined;
   const stage = data.stages.find((s) => s.id === ctx?.stageId);
   const taskCount = ms ? data.tasks.filter((t) => t.milestoneId === ms.id).length : 0;
@@ -43,10 +45,17 @@ export default function MilestoneFormModal({ ctx, onClose }: { ctx: MilestoneFor
     onClose();
   }
 
-  function remove() {
+  async function remove() {
     if (!ms) return;
-    const extra = taskCount > 0 ? ` beserta ${taskCount} tugasnya` : "";
-    if (!window.confirm(`Hapus milestone "${ms.title}"${extra}?`)) return;
+    const ok = await confirm({
+      title: "Hapus milestone ini?",
+      item: ms.title,
+      message: taskCount > 0 ? `${taskCount} tugas di dalamnya ikut terhapus. Tindakan ini tidak bisa dibatalkan.` : "Tindakan ini tidak bisa dibatalkan.",
+      confirmLabel: "Hapus Milestone",
+      tone: "danger",
+      icon: "trash",
+    });
+    if (!ok) return;
     dispatch({ type: "deleteMilestone", id: ms.id });
     onClose();
   }

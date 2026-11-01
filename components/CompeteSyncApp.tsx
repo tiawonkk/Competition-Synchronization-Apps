@@ -208,24 +208,24 @@ function Shell() {
     <div className="mx-auto flex min-h-screen max-w-[1600px] lg:gap-2 lg:p-3">
       {/* Desktop sidebar (collapsible) */}
       <aside
-        className={`sidebar-dark sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 flex-col rounded-[28px] p-3 transition-[width] duration-200 lg:flex ${collapsed ? "w-[72px]" : "w-64"}`}
+        className={`glass-panel sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 flex-col rounded-[28px] p-3 transition-[width] duration-200 lg:flex ${collapsed ? "w-[72px]" : "w-64"}`}
       >
         <div className={`mb-5 flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-2"}`}>
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#f6efd9] text-[#1c1c20]">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-900 shadow-md shadow-amber-500/20">
             <Trophy size={18} />
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-base font-bold leading-tight">CompeteSync</div>
-              <div className="text-[11px] text-white/45">Kelola lomba bersama tim</div>
+              <div className="text-base font-bold leading-tight text-slate-900 dark:text-white">CompeteSync</div>
+              <div className="text-[11px] text-slate-500 dark:text-white/45">Kelola lomba bersama tim</div>
             </div>
           )}
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto">
           <NavButton collapsed={collapsed} active={!current && view.kind === "dashboard"} onClick={() => setView({ kind: "dashboard" })} icon={<LayoutDashboard size={18} />} label="Beranda" />
           <NavButton collapsed={collapsed} active={view.kind === "history"} onClick={() => setView({ kind: "history" })} icon={<History size={18} />} label="Riwayat & Evaluasi" />
-          {!collapsed && <div className="px-3 pb-1 pt-4 text-xs font-semibold text-white/40">Lomba Saya</div>}
-          {collapsed && <div className="mx-3 my-3 h-px bg-white/10" />}
+          {!collapsed && <div className="px-3 pb-1 pt-4 text-xs font-semibold text-slate-400 dark:text-white/40">Lomba Saya</div>}
+          {collapsed && <div className="mx-3 my-3 h-px bg-slate-200 dark:bg-white/10" />}
           {active.map((c) => {
             const s = readiness(c.id);
             return (
@@ -240,7 +240,7 @@ function Shell() {
               />
             );
           })}
-          {active.length === 0 && !collapsed && <p className="px-3 py-2 text-xs text-white/35">Belum ada lomba.</p>}
+          {active.length === 0 && !collapsed && <p className="px-3 py-2 text-xs text-slate-400 dark:text-white/35">Belum ada lomba.</p>}
           <button className="btn-primary mt-3 w-full" onClick={() => setCreateOpen(true)} title="Buat Lomba Baru">
             <Plus size={16} /> {!collapsed && "Buat Lomba Baru"}
           </button>
@@ -255,32 +255,32 @@ function Shell() {
                 collapsed ? (
                   <Avatar user={user} size={32} />
                 ) : (
-                  <div className="flex min-w-0 items-center gap-2 rounded-2xl bg-white/[0.07] p-2 transition hover:bg-white/[0.12]">
+                  <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-100/70 dark:bg-white/[0.07] p-2 transition hover:bg-slate-200/80 dark:hover:bg-white/[0.12]">
                     <Avatar user={user} size={30} />
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-medium">{user.fullName}</div>
-                      <div className="truncate text-[10px] text-white/45">{userEmail(user)}</div>
+                      <div className="truncate text-xs font-semibold text-slate-800 dark:text-white">{user.fullName}</div>
+                      <div className="truncate text-[10px] text-slate-500 dark:text-white/45">{userEmail(user)}</div>
                     </div>
                   </div>
                 )
               }
             </ProfileMenu>
           </div>
-          <button className="rounded-xl p-2 text-white/50 hover:bg-danger/15 hover:text-danger" onClick={() => dispatch({ type: "logout" })} aria-label="Keluar" title="Keluar">
+          <button className="rounded-xl p-2 text-slate-400 dark:text-white/50 hover:bg-danger/15 hover:text-danger transition-colors" onClick={() => dispatch({ type: "logout" })} aria-label="Keluar" title="Keluar">
             <LogOut size={18} />
           </button>
-          <button className="rounded-lg p-2 text-white/50 hover:bg-white/10" onClick={toggleSidebar} aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}>
+          <button className="rounded-lg p-2 text-slate-400 dark:text-white/50 hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors" onClick={toggleSidebar} aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}>
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
       </aside>
 
       <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-8 lg:px-6 lg:pb-8 lg:pt-4">
-        <header className="mb-6 flex flex-wrap items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#1c1c20] text-[#f6efd9] lg:hidden">
+        <header className="glass-panel mb-6 flex flex-wrap items-center gap-2.5 rounded-2xl p-3 px-4 shadow-sm">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-active/10 text-active lg:hidden">
             <Trophy size={16} />
           </span>
-          <h1 className="min-w-0 flex-1 truncate text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>
+          <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold tracking-tight sm:text-2xl text-slate-900 dark:text-white">{title}</h1>
           <button className="btn-primary hidden xl:inline-flex" onClick={() => setCreateOpen(true)}>
             <Plus size={16} /> Buat Lomba Baru
           </button>
@@ -381,7 +381,9 @@ function NavButton({ active, onClick, icon, label, trailing, collapsed }: { acti
       title={label}
       aria-current={active ? "page" : undefined}
       className={`flex w-full items-center gap-2.5 rounded-xl py-2.5 text-left text-sm transition ${collapsed ? "justify-center px-0" : "px-3"} ${
-        active ? "bg-white/[0.12] font-semibold text-white" : "text-white/60 hover:bg-white/[0.06] hover:text-white"
+        active
+          ? "border border-indigo-200/90 bg-indigo-50/90 font-semibold text-indigo-700 shadow-sm dark:border-white/[0.15] dark:bg-white/[0.12] dark:text-white"
+          : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white"
       }`}
     >
       <span className="grid w-5 place-items-center">{icon}</span>
@@ -393,7 +395,7 @@ function NavButton({ active, onClick, icon, label, trailing, collapsed }: { acti
 
 function MobileTab({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
-    <button onClick={onClick} className={`flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10px] ${active ? "text-active" : "text-white/50"}`} aria-current={active ? "page" : undefined}>
+    <button onClick={onClick} className={`flex min-w-0 flex-1 flex-col items-center gap-1 py-2 text-[10px] ${active ? "text-indigo-600 dark:text-active font-semibold" : "text-slate-500 dark:text-white/50"}`} aria-current={active ? "page" : undefined}>
       {icon}
       <span className="max-w-full truncate">{label}</span>
     </button>

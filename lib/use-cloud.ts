@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { applyOps, diffRoom, fullOps, type Op } from "./cloud-ops";
+import { applyOps, diffRoom, fullOps, memberOpId, publicUser, type Op } from "./cloud-ops";
 import { cloudJoin, cloudPull, cloudPush, fetchStatus, type CloudError, type CloudMode, type CloudProblem } from "./cloud";
 import { uid } from "./logic";
 import type { AppData } from "./seed";
-import type { Competition } from "./types";
+import type { Competition, User } from "./types";
 
-const KEY = "cs-cloud-v1";
+const KEY = "cs-cloud-v2";
+const OLD_KEY = "cs-cloud-v1";
 const PAGE = 500;
 
 interface RoomMeta {
@@ -25,15 +26,27 @@ export interface CloudInfo {
   detail?: string;
   status: "idle" | "syncing" | "error";
   rooms: number;
-  /** Fetches a room by invite code, merges it into local state and starts syncing it. */
-  joinByCode: (code: string) => Promise<JoinInfo>;
+  /** Competitions whose invite code already belongs to another team in the cloud (id -> conflicting code). */
+  conflicts: Record<string, string>;
+  /** Fetches a room by invite code, merges it into local state, optionally pushes the joiner immediately, and starts syncing it. */
+  joinByCode: (code: string, joiner?: { userId: string; teamRole: string; user?: User }) => Promise<JoinInfo>;
   /** Merges a room that arrived another way (an invite link) without talking to the server. */
   importRoom: (ops: Op[], roomId: string) => void;
+  /** Immediately polls remote changes from the cloud. */
+  syncNow: () => Promise<void>;
 }
 
 function loadRooms(): Record<string, RoomMeta> {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "{}") as Record<string, RoomMeta>;
+    const saved = localStorage.getItem(KEY);
+    if (saved) return JSON.parse(saved) as Record<string, RoomMeta>;
+    // Older builds moved the cursor to their own push's sequence number and could skip teammates' events (a join).
+    // Keep those rooms but replay them from the start once; nothing is re-uploaded, so no teammate edit is overwritten.
+    const old = JSON.parse(localStorage.getItem(OLD_KEY) ?? "{}") as Record<string, RoomMeta>;
+    const rooms = Object.fromEntries(Object.entries(old).map(([id, r]) => [id, { code: r.code, seq: 0 }]));
+    localStorage.setItem(KEY, JSON.stringify(rooms));
+    localStorage.removeItem(OLD_KEY);
+    return rooms;
   } catch {
     return {};
   }
@@ -52,12 +65,15 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
   const [detail, setDetail] = useState<string | undefined>();
   const [status, setStatus] = useState<CloudInfo["status"]>("idle");
   const [rooms, setRooms] = useState(0);
+  const [conflicts, setConflicts] = useState<Record<string, string>>({});
+  const conflictRef = useRef<Record<string, string>>({});
   const clientId = useRef(uid("c"));
   const prev = useRef(data);
   const meta = useRef<Record<string, RoomMeta>>({});
   const queue = useRef<Record<string, Op[]>>({});
   const busy = useRef(false);
   const again = useRef(false);
+  const runningRef = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const on = mode === "supabase" || mode === "memory";
 
@@ -100,7 +116,10 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
           const r = await cloudPush(room.code, roomId, clientId.current, chunk);
           if (!r.ok) {
             if (r.error === "code_taken") {
-              // Another team already owns this code in the cloud: stop syncing this room rather than mixing two teams.
+              // Another team already owns this code in the cloud: stop syncing this room rather than mixing two teams,
+              // and remember it so the UI can offer a new code instead of retrying forever.
+              conflictRef.current = { ...conflictRef.current, [roomId]: room.code };
+              setConflicts(conflictRef.current);
               delete meta.current[roomId];
               delete queue.current[roomId];
               persist();
@@ -108,10 +127,9 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
             failed = true;
             break;
           }
-          if (r.data && typeof r.data.head === "number" && r.data.head > room.seq) {
-            room.seq = r.data.head;
-            persist();
-          }
+          // The pull cursor is NOT moved to the push's sequence number: other devices may have written events in
+          // between (a teammate joining, for example) and jumping over them would lose those changes for good.
+          // Our own events come back on the next pull and are skipped by clientId.
           queue.current[roomId] = queue.current[roomId].slice(chunk.length);
         }
         if (failed) break;
@@ -150,6 +168,13 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     const fresh = new Set<string>();
     for (const c of data.competitions) {
       if (meta.current[c.id]) continue;
+      // Still holding a code another team owns: wait until the leader picks a new one.
+      if (conflictRef.current[c.id] === c.inviteCode) continue;
+      if (conflictRef.current[c.id]) {
+        const { [c.id]: _gone, ...rest } = conflictRef.current; // eslint-disable-line @typescript-eslint/no-unused-vars
+        conflictRef.current = rest;
+        setConflicts(rest);
+      }
       const isMember = data.members.some((m) => m.competitionId === c.id && m.userId === me);
       if (!isMember) continue;
       const leads = data.members.some((m) => m.competitionId === c.id && m.userId === me && m.role === "leader");
@@ -174,39 +199,45 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     }
   }, [data, on, me, persist, schedule]);
 
+  const syncNow = useCallback(async () => {
+    if (!on || runningRef.current || document.visibilityState === "hidden") return;
+    runningRef.current = true;
+    try {
+      if (Object.keys(queue.current).length) await flush();
+      for (const [roomId, room] of Object.entries(meta.current)) {
+        let more = true;
+        while (more) {
+          const r = await cloudPull(room.code, room.seq);
+          if (!r.ok) {
+            if (r.error !== "not_found") setStatus("error");
+            break;
+          }
+          const foreign = r.data.events.filter((e) => e.clientId !== clientId.current).flatMap((e) => e.ops);
+          if (foreign.length) {
+            prev.current = applyOps(prev.current, foreign, roomId);
+            applyRemote(foreign, roomId);
+          }
+          room.seq = r.data.head;
+          more = r.data.events.length >= PAGE;
+        }
+      }
+      persist();
+      setStatus("idle");
+    } catch {
+      setStatus("error");
+    } finally {
+      runningRef.current = false;
+    }
+  }, [on, flush, applyRemote, persist]);
+
   // Other devices' changes -> local state.
   useEffect(() => {
     if (!on) return;
     let stopped = false;
-    let running = false;
-    const tick = async () => {
-      if (running || document.visibilityState === "hidden") return;
-      running = true;
-      try {
-        if (Object.keys(queue.current).length) await flush();
-        for (const [roomId, room] of Object.entries(meta.current)) {
-          let more = true;
-          while (more && !stopped) {
-            const r = await cloudPull(room.code, room.seq);
-            if (!r.ok) {
-              if (r.error !== "not_found") setStatus("error"); // not_found: the first upload has not landed yet
-              break;
-            }
-            const foreign = r.data.events.filter((e) => e.clientId !== clientId.current).flatMap((e) => e.ops);
-            if (foreign.length) {
-              prev.current = applyOps(prev.current, foreign, roomId);
-              applyRemote(foreign, roomId);
-            }
-            room.seq = r.data.head;
-            more = r.data.events.length >= PAGE;
-          }
-        }
-        persist();
-      } finally {
-        running = false;
-      }
+    const tick = () => {
+      if (!stopped) syncNow();
     };
-    const id = setInterval(tick, 4000);
+    const id = setInterval(tick, 2500);
     const onVisible = () => document.visibilityState === "visible" && tick();
     document.addEventListener("visibilitychange", onVisible);
     tick();
@@ -215,7 +246,7 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [on, flush, applyRemote, persist]);
+  }, [on, syncNow]);
 
   const importRoom = useCallback(
     (ops: Op[], roomId: string) => {
@@ -232,7 +263,7 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
   );
 
   const joinByCode = useCallback(
-    async (raw: string): Promise<JoinInfo> => {
+    async (raw: string, joiner?: { userId: string; teamRole: string; user?: User }): Promise<JoinInfo> => {
       const first = await cloudJoin(raw);
       if (!first.ok) return first;
       const roomId = first.data.roomId;
@@ -250,6 +281,27 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
       if (!compOp) return { ok: false, error: "not_found" };
       const comp = compOp.v as unknown as Competition;
       importRoom(ops, roomId);
+
+      if (joiner) {
+        const memberOp: Op = {
+          k: "member",
+          id: memberOpId(roomId, joiner.userId),
+          v: { competitionId: roomId, userId: joiner.userId, role: "member", teamRole: joiner.teamRole },
+        };
+        const joinOps: Op[] = [memberOp];
+        if (joiner.user) {
+          joinOps.push({
+            k: "user",
+            id: joiner.userId,
+            v: publicUser(joiner.user) as unknown as Record<string, unknown>,
+          });
+        }
+        const pushRes = await cloudPush(comp.inviteCode, roomId, clientId.current, joinOps);
+        if (pushRes.ok && typeof pushRes.data.head === "number") {
+          head = pushRes.data.head;
+        }
+      }
+
       meta.current[roomId] = { code: comp.inviteCode, seq: head };
       persist();
       const ids = new Set<string>();
@@ -264,5 +316,5 @@ export function useCloud(data: AppData, me: string, applyRemote: (ops: Op[], roo
     [importRoom, persist],
   );
 
-  return { mode, problem, detail, status, rooms, joinByCode, importRoom };
+  return { mode, problem, detail, status, rooms, conflicts, joinByCode, importRoom, syncNow };
 }

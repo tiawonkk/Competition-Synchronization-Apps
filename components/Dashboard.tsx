@@ -102,7 +102,7 @@ export default function Dashboard({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 id="radar-h" className="flex items-center gap-2 text-sm font-semibold">
             <Radar size={16} className="text-active" /> Radar Bentrok Jadwal
-            <span className="text-xs font-normal text-white/40">jendela 48 jam lintas kompetisi</span>
+            <span className="text-xs font-normal text-slate-400 dark:text-white/40">jendela 48 jam lintas kompetisi</span>
           </h2>
           {collisions.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
@@ -281,8 +281,8 @@ export default function Dashboard({
             {data.notices.slice(0, 6).map((n) => (
               <li key={n.id} className="flex items-start gap-2.5 text-xs">
                 <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: TONE[n.tone].hex }} />
-                <span className="min-w-0 flex-1 text-white/80">{n.text}</span>
-                <span className="shrink-0 tabular-nums text-white/35">{fmtTime(n.at)}</span>
+                <span className="min-w-0 flex-1 text-slate-700 dark:text-white/80">{n.text}</span>
+                <span className="shrink-0 tabular-nums text-slate-400 dark:text-white/35">{fmtTime(n.at)}</span>
               </li>
             ))}
           </ul>
@@ -295,12 +295,12 @@ export default function Dashboard({
 /** Pastel stat block. Text stays in the foreground colour so it reads on every tint, light or dark. */
 function Tile({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: number; bg: "lav" | "mint" | "cream" | "peach" | "sky" }) {
   return (
-    <div className="rounded-3xl p-4 sm:p-5" style={{ background: `var(--tile-${bg})` }}>
-      <div className="flex items-center gap-2 text-xs font-semibold text-white/70">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-[#fff]/60 text-[#1c1c22] dark:bg-[#fff]/10 dark:text-[#fff]">{icon}</span>
+    <div className="rounded-3xl p-4 sm:p-5 border border-black/[0.04] dark:border-white/[0.05] shadow-sm backdrop-blur-md" style={{ background: `var(--tile-${bg})` }}>
+      <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-white/80">
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-white/70 text-slate-800 dark:bg-white/10 dark:text-white shadow-sm">{icon}</span>
         {label}
       </div>
-      <div className="mt-3 text-4xl font-extrabold tabular-nums">{value}</div>
+      <div className="mt-3 text-4xl font-extrabold tabular-nums text-slate-900 dark:text-white">{value}</div>
     </div>
   );
 }

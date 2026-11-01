@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { dayKey, fromLocalInput, PRIORITY_LABEL, toLocalInput, uid } from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import type { Priority } from "@/lib/types";
+import { useConfirm } from "../ConfirmDialog";
 import { Modal } from "../ui";
 
 export interface TaskFormCtx {
@@ -20,6 +21,7 @@ const PRIORITIES: Priority[] = ["critical", "high", "medium", "low"];
 /** Add or edit one task: title, description, assignee, priority, deadline and the milestone it belongs to. */
 export default function TaskFormModal({ ctx, onClose }: { ctx: TaskFormCtx | null; onClose: () => void }) {
   const { data, me, dispatch } = useStore();
+  const confirm = useConfirm();
   const task = ctx?.taskId ? data.tasks.find((t) => t.id === ctx.taskId) : undefined;
   const team = data.members.filter((m) => m.competitionId === ctx?.competitionId && m.role !== "advisor");
   const milestones = data.milestones.filter((m) => m.competitionId === ctx?.competitionId && m.stageId === ctx?.stageId).sort((a, b) => a.orderIndex - b.orderIndex);
@@ -89,9 +91,17 @@ export default function TaskFormModal({ ctx, onClose }: { ctx: TaskFormCtx | nul
     onClose();
   }
 
-  function remove() {
+  async function remove() {
     if (!task) return;
-    if (!window.confirm(`Hapus tugas "${task.title}"? Penanda kalender dan skor kesiapan ikut diperbarui.`)) return;
+    const ok = await confirm({
+      title: "Hapus tugas ini?",
+      item: task.title,
+      message: "Penanda kalender ikut dihapus dan skor kesiapan dihitung ulang. Tindakan ini tidak bisa dibatalkan.",
+      confirmLabel: "Hapus Tugas",
+      tone: "danger",
+      icon: "trash",
+    });
+    if (!ok) return;
     dispatch({ type: "deleteTask", id: task.id });
     onClose();
   }

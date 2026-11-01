@@ -2,98 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Flat, solid surfaces: a cool grey page, white cards, a dark navigation rail and pastel stat tiles. */
+/* Modern Glassmorphic Theme with cohesive Light and Dark modes */
 :root {
   color-scheme: light;
-  --fg: 28 28 34;
+  --fg: 24 28 38;
   --surface: 255 255 255;
-  --safe: 18 150 98;
-  --active: 66 99 255;
+  --safe: 16 185 129;
+  --active: 79 70 229;
   --warn: 217 119 6;
-  --danger: 228 62 90;
-  --page-bg: #edeff5;
-  --card-border: rgb(28 28 34 / 0.07);
-  --card-shadow: 0 1px 2px rgb(20 20 40 / 0.04), 0 6px 20px rgb(20 20 40 / 0.04);
-  --modal-bg: #ffffff;
-  --tile-lav: #e7e4fb;
-  --tile-mint: #d9f0e1;
-  --tile-cream: #fbf0cf;
-  --tile-peach: #fbdcd3;
-  --tile-sky: #dcebfb;
+  --danger: 225 29 72;
+  --page-bg: #f4f6fc;
+  --card-bg: rgba(255, 255, 255, 0.78);
+  --card-border: rgba(226, 232, 240, 0.85);
+  --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.02);
+  --nav-bg: rgba(255, 255, 255, 0.75);
+  --nav-border: rgba(226, 232, 240, 0.85);
+  --nav-fg: #1e293b;
+  --modal-bg: rgba(255, 255, 255, 0.95);
+  --glass-glow: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.07) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.07) 0px, transparent 50%), radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.03) 0px, transparent 50%);
+  --tile-lav: #ede9fe;
+  --tile-mint: #d1fae5;
+  --tile-cream: #fef3c7;
+  --tile-peach: #ffe4e6;
+  --tile-sky: #e0f2fe;
 }
 
 .dark {
   color-scheme: dark;
-  --fg: 240 240 246;
-  --surface: 30 30 36;
-  --safe: 52 199 135;
-  --active: 112 138 255;
-  --warn: 245 166 35;
-  --danger: 250 98 122;
-  --page-bg: #121216;
-  --card-border: rgb(255 255 255 / 0.07);
-  --card-shadow: none;
-  --modal-bg: #1e1e24;
-  --tile-lav: #2b2846;
-  --tile-mint: #1d3329;
-  --tile-cream: #3a3320;
-  --tile-peach: #3d2a26;
-  --tile-sky: #1f3047;
-}
-
-/* A permanently dark region (navigation rail, login panel): re-point the tokens so text-white/* reads light inside it. */
-.sidebar-dark {
-  --fg: 255 255 255;
-  --surface: 44 44 52;
-  --card-border: rgb(255 255 255 / 0.08);
-  background-color: #1c1c20;
-  color: #fff;
+  --fg: 241 245 249;
+  --surface: 20 22 34;
+  --safe: 52 211 153;
+  --active: 129 140 248;
+  --warn: 251 191 36;
+  --danger: 251 113 133;
+  --page-bg: #090a10;
+  --card-bg: rgba(18, 20, 32, 0.72);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.55);
+  --nav-bg: rgba(14, 16, 26, 0.78);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-fg: #f8fafc;
+  --modal-bg: rgba(16, 18, 30, 0.94);
+  --glass-glow: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.14) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.09) 0px, transparent 50%), radial-gradient(at 50% 50%, rgba(14, 165, 233, 0.05) 0px, transparent 50%);
+  --tile-lav: #2e1065;
+  --tile-mint: #064e3b;
+  --tile-cream: #78350f;
+  --tile-peach: #881337;
+  --tile-sky: #0c4a6e;
 }
 
 html,
 body {
   min-height: 100%;
   background-color: var(--page-bg);
+  background-image: var(--glass-glow);
+  background-attachment: fixed;
   color: rgb(var(--fg));
 }
 
 body {
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 @layer components {
   .card {
-    background: rgb(var(--surface));
+    background: var(--card-bg);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     border: 1px solid var(--card-border);
     box-shadow: var(--card-shadow);
-    @apply rounded-3xl;
+    @apply rounded-3xl transition-all duration-200;
   }
+
+  .glass-panel {
+    background: var(--nav-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--nav-border);
+    box-shadow: var(--card-shadow);
+  }
+
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition
       disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active/40;
   }
+
   .btn-primary {
-    @apply btn bg-active text-[#fff] hover:brightness-95;
+    @apply btn bg-gradient-to-r from-indigo-600 via-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/25 hover:brightness-105 active:scale-95;
   }
+
   .btn-ghost {
-    @apply btn border border-white/10 bg-transparent text-white/80 hover:bg-white/[0.06];
+    @apply btn border border-slate-200/90 bg-white/70 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-sm
+      dark:border-white/10 dark:bg-white/[0.04] dark:text-white/80 dark:hover:bg-white/[0.08] dark:hover:text-white dark:shadow-none;
   }
+
   .btn-danger {
-    @apply btn bg-danger text-[#fff] hover:brightness-95;
+    @apply btn bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-500/25 hover:brightness-105 active:scale-95;
   }
+
   .btn-safe {
-    @apply btn bg-safe text-[#fff] hover:brightness-95;
+    @apply btn bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25 hover:brightness-105 active:scale-95;
   }
+
   .field {
-    @apply w-full rounded-xl border border-transparent bg-white/[0.06] px-3.5 py-2.5 text-sm text-white placeholder:text-white/35
-      focus:border-active focus:bg-transparent focus:outline-none focus:ring-2 focus:ring-active/20;
+    @apply w-full rounded-xl border border-slate-200/90 bg-slate-50/80 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400
+      focus:border-active focus:bg-white focus:outline-none focus:ring-2 focus:ring-active/20
+      dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-white/35 dark:focus:bg-transparent;
   }
+
   .label {
-    @apply mb-1.5 block text-xs font-semibold text-white/60;
+    @apply mb-1.5 block text-xs font-semibold text-slate-600 dark:text-white/60;
   }
+
   .dot-grid {
-    background-image: radial-gradient(rgb(var(--fg) / 0.14) 1px, transparent 1px);
+    background-image: radial-gradient(rgb(var(--fg) / 0.12) 1px, transparent 1px);
     background-size: 22px 22px;
   }
 }

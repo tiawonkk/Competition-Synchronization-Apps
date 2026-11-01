@@ -256,15 +256,23 @@ export function normalizeInviteCode(raw: string): string {
   return (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-/** "Hackathon Nasional AI" -> "HACK-88". Retries until the code is unused. */
+/** "Hackathon Nasional AI" -> "HACK-7Q4M". Retries until the code is unused locally.
+ * The suffix has 4 characters without look-alikes (no 0/O, 1/I/L): codes are also the key of a cloud room, so they
+ * must rarely collide between teams and must not be guessable from a short list. */
+const CODE_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 export function makeInviteCode(title: string, taken: string[]): string {
   const prefix = title.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4) || "TIM";
   const used = new Set(taken.map(normalizeInviteCode));
+  const pick = () => {
+    const bytes = new Uint32Array(4);
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => CODE_CHARS[b % CODE_CHARS.length]).join("");
+  };
   for (let i = 0; i < 200; i++) {
-    const code = `${prefix}-${10 + Math.floor(Math.random() * 90)}`;
+    const code = `${prefix}-${pick()}`;
     if (!used.has(normalizeInviteCode(code))) return code;
   }
-  return `${prefix}-${Date.now().toString().slice(-4)}`;
+  return `${prefix}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 }
 
 /** Next Sunday 19:00 WIB (= 12:00 UTC) strictly after `now`. */

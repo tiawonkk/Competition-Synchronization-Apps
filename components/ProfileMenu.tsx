@@ -5,11 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { userEmail } from "@/lib/logic";
 import { emptyData } from "@/lib/seed";
 import { useStore } from "@/lib/store";
+import { useConfirm } from "./ConfirmDialog";
 import { Avatar } from "./ui";
 
 /** Account popover: who is signed in, wipe local data, or sign out. */
 export default function ProfileMenu({ children, placement }: { children: (open: boolean) => React.ReactNode; placement: "up" | "down" }) {
   const { data, me, dispatch } = useStore();
+  const confirm = useConfirm();
   const user = data.users.find((u) => u.id === me);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -48,11 +50,17 @@ export default function ProfileMenu({ children, placement }: { children: (open: 
           <div className="my-1 h-px bg-white/10" />
           <button
             role="menuitem"
-            onClick={() => {
-              if (window.confirm("Hapus semua akun dan data di browser ini (lomba, tugas, whiteboard)? Tindakan ini tidak bisa dibatalkan.")) {
-                dispatch({ type: "reset", data: emptyData() });
-              }
+            onClick={async () => {
               setOpen(false);
+              const ok = await confirm({
+                title: "Hapus semua data?",
+                item: "Akun · Lomba · Tugas · Whiteboard",
+                message: "Semua data di browser ini dikosongkan. Lomba yang sudah tersinkron ke cloud tetap ada di sana. Tindakan ini tidak bisa dibatalkan.",
+                confirmLabel: "Hapus Semua",
+                tone: "danger",
+                icon: "trash",
+              });
+              if (ok) dispatch({ type: "reset", data: emptyData() });
             }}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-white/70 hover:bg-white/10"
           >

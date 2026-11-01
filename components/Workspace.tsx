@@ -11,6 +11,7 @@ import { useStore } from "@/lib/store";
 import type { Stage, Task } from "@/lib/types";
 import type { EvalContext } from "./modals/EvaluationModal";
 import CalendarPanel from "./CalendarPanel";
+import { useConfirm } from "./ConfirmDialog";
 import TeamPanel from "./TeamPanel";
 import CloudVault from "./CloudVault";
 import MilestoneFormModal, { type MilestoneFormCtx } from "./modals/MilestoneFormModal";
@@ -36,6 +37,7 @@ export default function Workspace({
   onAddStage: () => void;
 }) {
   const { data, now, me, readiness, dispatch } = useStore();
+  const confirm = useConfirm();
   const [assignee, setAssignee] = useState<string>("all");
   const [showDone, setShowDone] = useState(true);
   const [tab, setTabState] = useState<"tasks" | "board" | "vault">(() => {
@@ -106,9 +108,17 @@ export default function Workspace({
     }
   }
 
-  function advance() {
+  async function advance() {
     if (!activeStage || !nextStage) return;
-    if (!window.confirm(`Tandai ${activeStage.name} lolos dan buka ${nextStage.name}?`)) return;
+    const ok = await confirm({
+      title: `Lolos ke ${nextStage.name}?`,
+      item: `${activeStage.name} → ${nextStage.name}`,
+      message: `Babak berikutnya dibuka dan tugas barunya dijadwalkan otomatis.${comp.advisorEmail ? " Pembina mendapat email pembaruan." : ""}`,
+      confirmLabel: "🎉 Ya, Lolos",
+      tone: "safe",
+      icon: "check",
+    });
+    if (!ok) return;
     const work = buildStageWork({
       competitionId,
       stage: nextStage,
@@ -125,9 +135,17 @@ export default function Workspace({
     setStageSel(nextStage.id);
   }
 
-  function eliminate() {
+  async function eliminate() {
     if (!activeStage) return;
-    if (!window.confirm(`Tandai tim gugur di ${activeStage.name}? Pengingat yang tersisa akan dibatalkan.`)) return;
+    const ok = await confirm({
+      title: "Tandai tim gugur?",
+      item: activeStage.name,
+      message: "Pengingat yang tersisa dibatalkan dan form evaluasi dibuka. Tetap semangat untuk lomba berikutnya!",
+      confirmLabel: "Ya, Gugur",
+      tone: "danger",
+      icon: "warn",
+    });
+    if (!ok) return;
     onEvaluate({ competitionId, stageId: activeStage.id, stageResult: "eliminated" });
   }
 
@@ -271,7 +289,7 @@ export default function Workspace({
         )}
       </section>
 
-      <div className="flex gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1 sm:w-fit" role="tablist">
+      <div className="flex gap-1.5 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl p-1.5 sm:w-fit shadow-sm" role="tablist">
         {([
           ["tasks", "Tugas & Milestone"],
           ["board", "Whiteboard & Ideasi"],
@@ -282,7 +300,11 @@ export default function Workspace({
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition sm:flex-none ${tab === id ? "bg-surface text-white shadow-sm" : "text-white/55 hover:text-white"}`}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition sm:flex-none ${
+              tab === id
+                ? "bg-white text-indigo-700 shadow-sm border border-slate-200/80 dark:bg-white/[0.12] dark:text-white dark:border-white/[0.15]"
+                : "text-slate-600 hover:text-slate-900 dark:text-white/60 dark:hover:text-white"
+            }`}
           >
             {label}
           </button>
@@ -424,6 +446,7 @@ export default function Workspace({
 
 function TaskRow({ task, onComplete, onTestAlarm, onEditTask, readOnly }: { task: Task; onComplete: (id: string) => void; onTestAlarm: (id: string) => void; onEditTask: (t: Task) => void; readOnly: boolean }) {
   const { data, now, me, dispatch } = useStore();
+  const confirm = useConfirm();
   const team = data.members.filter((m) => m.competitionId === task.competitionId);
   const isLeader = team.some((m) => m.userId === me && m.role === "leader");
   const user = data.users.find((u) => u.id === task.assignedTo);
@@ -508,8 +531,16 @@ function TaskRow({ task, onComplete, onTestAlarm, onEditTask, readOnly }: { task
             {isLeader && (
               <button
                 className="rounded-lg p-1.5 text-white/45 hover:bg-danger/15 hover:text-danger"
-                onClick={() => {
-                  if (window.confirm(`Hapus tugas "${task.title}"?`)) dispatch({ type: "deleteTask", id: task.id });
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "Hapus tugas ini?",
+                    item: task.title,
+                    message: "Penanda kalender ikut dihapus dan skor kesiapan dihitung ulang. Tindakan ini tidak bisa dibatalkan.",
+                    confirmLabel: "Hapus Tugas",
+                    tone: "danger",
+                    icon: "trash",
+                  });
+                  if (ok) dispatch({ type: "deleteTask", id: task.id });
                 }}
                 aria-label={`Hapus tugas ${task.title}`}
                 title="Hapus tugas"

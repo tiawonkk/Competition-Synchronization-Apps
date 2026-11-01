@@ -103,7 +103,7 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 grid place-items-end bg-slate-900/45 p-0 sm:place-items-center sm:p-4"
+          className="fixed inset-0 z-50 grid place-items-end bg-slate-950/50 backdrop-blur-md p-0 sm:place-items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, pointerEvents: "none" }} // a fading overlay must never swallow clicks
@@ -113,7 +113,7 @@ export function Modal({
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className={`card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-b-none bg-[var(--modal-bg)] shadow-2xl sm:rounded-3xl ${
+            className={`card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-b-none border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-[#131422]/95 backdrop-blur-2xl shadow-2xl sm:rounded-3xl ${
               wide ? "sm:max-w-4xl" : "sm:max-w-lg"
             }`}
             initial={{ y: 40, opacity: 0, scale: 0.98 }}
@@ -123,17 +123,17 @@ export function Modal({
             onClick={(e) => e.stopPropagation()}
           >
             {title && (
-              <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-3.5">
-                <h2 className="text-base font-semibold">{title}</h2>
+              <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08] px-5 py-3.5">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h2>
                 {!locked && onClose && (
-                  <button onClick={onClose} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10" aria-label="Tutup">
+                  <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:text-slate-700 dark:text-white/60 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors" aria-label="Tutup">
                     <X size={18} />
                   </button>
                 )}
               </div>
             )}
             <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-            {footer && <div className="shrink-0 border-t border-white/[0.08] bg-[rgb(var(--surface))] px-5 py-3.5">{footer}</div>}
+            {footer && <div className="shrink-0 border-t border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] px-5 py-3.5">{footer}</div>}
           </motion.div>
         </motion.div>
       )}

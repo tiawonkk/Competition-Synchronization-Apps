@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DAY, dayKey, detectCollisions, fmtTime } from "@/lib/logic";
 import { useStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
+import { useConfirm } from "./ConfirmDialog";
 import TaskFormModal, { type TaskFormCtx } from "./modals/TaskFormModal";
 
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -54,6 +55,7 @@ const startOfWeek = (t: number) => {
 /** Real calendar across every running competition: month grid and 7-day time grid, event pills, collision flags and a day drawer. */
 export default function CompetitionCalendar({ onComplete }: { onComplete: (taskId: string) => void }) {
   const { data, now, me, liveCompetitions, dispatch } = useStore();
+  const confirm = useConfirm();
   const [view, setView] = useState<View>("month");
   const [anchor, setAnchor] = useState(now);
   const [filter, setFilter] = useState<string>("all");
@@ -388,8 +390,16 @@ export default function CompetitionCalendar({ onComplete }: { onComplete: (taskI
                         {lead && (
                           <button
                             className="btn-ghost !border-danger/40 !px-2.5 !py-1 text-[11px] !text-danger hover:!bg-danger/10"
-                            onClick={() => {
-                              if (window.confirm(`Hapus tugas "${t.title}"?`)) dispatch({ type: "deleteTask", id: t.id });
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: "Hapus tugas ini?",
+                                item: t.title,
+                                message: "Penanda kalender ikut dihapus dan skor kesiapan dihitung ulang.",
+                                confirmLabel: "Hapus Tugas",
+                                tone: "danger",
+                                icon: "trash",
+                              });
+                              if (ok) dispatch({ type: "deleteTask", id: t.id });
                             }}
                           >
                             <Trash2 size={12} /> Hapus

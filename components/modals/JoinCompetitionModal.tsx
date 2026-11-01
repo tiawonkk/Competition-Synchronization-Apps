@@ -54,9 +54,10 @@ export default function JoinCompetitionModal({
     setError(null);
 
     // Always ask the cloud first, so a competition created on another device is found.
+    const currentUser = data.users.find((u) => u.id === me);
     let remote: { roomId: string; title: string; memberIds: string[] } | null = null;
     if (online) {
-      const r = await cloud.joinByCode(raw);
+      const r = await cloud.joinByCode(raw, { userId: me, teamRole: role, user: currentUser });
       if (r.ok) remote = r;
       else if (r.error !== "not_found") {
         setBusy(false);
@@ -99,8 +100,13 @@ export default function JoinCompetitionModal({
     <Modal open={open} onClose={onClose} title="Gabung Lomba dengan Kode">
       <div className="space-y-4 p-5">
         {cloud.mode === "checking" && <p className="rounded-xl bg-white/[0.05] px-3 py-2 text-xs text-white/60">Memeriksa koneksi cloud…</p>}
-        {online && (
+        {cloud.mode === "supabase" && (
           <p className="rounded-xl bg-safe/10 px-3 py-2 text-xs font-medium text-safe">🔄 Terhubung ke Cloud Server — Masukkan kode undangan dari ketua tim Anda.</p>
+        )}
+        {cloud.mode === "memory" && (
+          <p className="rounded-xl bg-warn/10 px-3 py-2 text-xs text-warn">
+            🧪 Server lokal tanpa Supabase: lomba hanya dibagikan antar-tab/perangkat yang membuka server ini (alamat yang sama) dan hilang saat server dimatikan. Untuk tim sungguhan, isi kunci Supabase atau pakai versi Vercel.
+          </p>
         )}
         {cloud.mode === "off" && (
           <p className="rounded-xl bg-warn/10 px-3 py-2 text-xs text-warn">
