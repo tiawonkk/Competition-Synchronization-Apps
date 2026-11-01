@@ -18,7 +18,7 @@ interface View {
 const KIND_LABEL: Record<NoteKind, string> = { ide: "Ide Utama", fitur: "Fitur", riset: "Riset", kendala: "Kendala" };
 const INK = "ink"; // theme-aware default pen color
 const PEN_COLORS = [INK, "#2563EB", "#E11D48", "#059669", "#D97706"];
-const NOTE_W = 208;
+const NOTE_W = 224;
 
 const strokeColor = (c: string) => (c === INK ? "rgb(var(--fg) / 0.85)" : c);
 const pathOf = (pts: [number, number][]) => pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
@@ -146,14 +146,14 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
   const converting = notes.find((n) => n.id === convertFor);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="card relative overflow-hidden">
         <div
           ref={canvasRef}
-          className={`dot-grid relative h-[68vh] min-h-[460px] select-none overflow-hidden ${
+          className={`dot-grid relative h-[68vh] min-h-[480px] select-none overflow-hidden ${
             tool === "pen" ? "cursor-crosshair" : tool === "eraser" ? "cursor-cell" : "cursor-grab active:cursor-grabbing"
           }`}
-          style={{ touchAction: "none", backgroundPosition: `${view.x}px ${view.y}px`, backgroundSize: `${22 * view.z}px ${22 * view.z}px` }}
+          style={{ touchAction: "none", backgroundPosition: `${view.x}px ${view.y}px`, backgroundSize: `${24 * view.z}px ${24 * view.z}px` }}
           onPointerDown={onCanvasDown}
           onPointerMove={onCanvasMove}
           onPointerUp={onCanvasUp}
@@ -192,22 +192,22 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
                 <div
                   key={n.id}
                   data-note
-                  className={`absolute rounded-xl text-slate-900 shadow-[0_6px_18px_rgb(0,0,0,0.14)] ring-1 ring-black/5 ${tool === "pen" ? "pointer-events-none" : ""} ${
-                    drag?.id === n.id ? "z-10 scale-[1.02] shadow-[0_12px_28px_rgb(0,0,0,0.22)]" : ""
+                  className={`absolute rounded-[24px] p-1 text-[#141416] shadow-[0_8px_24px_-4px_rgba(20,20,22,0.1)] ring-1 ring-black/[0.06] ${tool === "pen" ? "pointer-events-none" : ""} ${
+                    drag?.id === n.id ? "z-10 scale-[1.02] shadow-[0_16px_32px_-6px_rgba(20,20,22,0.18)]" : ""
                   }`}
                   style={{ left: pos.x, top: pos.y, width: NOTE_W, background: n.color }}
                 >
                   <div
-                    className={`flex items-center justify-between rounded-t-xl bg-black/[0.06] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 ${tool === "select" ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    className={`flex items-center justify-between px-3 py-2 text-[11px] font-bold tracking-tight text-[#141416]/80 ${tool === "select" ? "cursor-grab active:cursor-grabbing" : ""}`}
                     onPointerDown={(e) => onNoteDown(e, n)}
                     onPointerMove={onNoteMove}
                     onPointerUp={onNoteUp}
                   >
-                    <span>{n.kind ? KIND_LABEL[n.kind] : "Catatan"}</span>
-                    <span className="flex items-center gap-1.5 normal-case tracking-normal">
-                      {author && <span className="font-medium text-slate-600">{author.fullName.split(" ")[0]}</span>}
+                    <span className="rounded-full bg-[#ffffff]/70 px-2.5 py-0.5 text-[10px] font-bold">{n.kind ? KIND_LABEL[n.kind] : "Catatan"}</span>
+                    <span className="flex items-center gap-1.5">
+                      {author && <span className="font-medium text-[#141416]/60">{author.fullName.split(" ")[0]}</span>}
                       <button
-                        className="rounded p-0.5 text-slate-500 hover:bg-black/10 hover:text-slate-900"
+                        className="rounded-full p-1 text-[#141416]/50 hover:bg-black/10 hover:text-[#141416]"
                         aria-label="Hapus catatan"
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => dispatch({ type: "wbRemove", id: n.id })}
@@ -216,29 +216,33 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
                       </button>
                     </span>
                   </div>
-                  <textarea
-                    value={n.content}
-                    placeholder="Tulis ide Anda…"
-                    rows={Math.max(3, Math.ceil(n.content.length / 27))}
-                    onChange={(e) => dispatch({ type: "wbPatch", id: n.id, patch: { content: e.target.value } })}
-                    className="block w-full resize-none bg-transparent px-2.5 py-2 text-[13px] leading-snug text-slate-900 outline-none placeholder:text-slate-500/70"
-                  />
-                  <div className="flex items-center gap-1.5 px-2 pb-2">
+                  <div className="rounded-[18px] bg-[#ffffff]/60 p-2.5">
+                    <textarea
+                      value={n.content}
+                      placeholder="Tulis ide Anda…"
+                      rows={Math.max(3, Math.ceil(n.content.length / 27))}
+                      onChange={(e) => dispatch({ type: "wbPatch", id: n.id, patch: { content: e.target.value } })}
+                      className="block w-full resize-none bg-transparent text-[13px] leading-relaxed text-[#141416] outline-none placeholder:text-[#141416]/45"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2 pb-2 pt-2">
                     <button
                       onClick={() => dispatch({ type: "wbVote", id: n.id, userId: me })}
                       aria-pressed={voted}
-                      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition ${voted ? "bg-slate-900 text-[#fff]" : "bg-black/[0.07] text-slate-700 hover:bg-black/[0.12]"}`}
+                      className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition ${
+                        voted ? "bg-[#141416] text-[#ffffff]" : "bg-[#ffffff]/80 text-[#141416] hover:bg-[#ffffff]"
+                      }`}
                     >
                       <ThumbsUp size={12} /> +{n.votes.length}
                     </button>
                     {n.taskId ? (
-                      <button onClick={onGoTasks} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-[#fff]">
+                      <button onClick={onGoTasks} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-[#dcfce7] px-3 py-1 text-[11px] font-bold text-[#14532d]">
                         <Check size={12} /> Jadi tugas <ArrowRight size={11} />
                       </button>
                     ) : (
                       <button
                         onClick={() => setConvertFor(n.id)}
-                        className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-[#fff] transition hover:bg-blue-600"
+                        className="flex flex-1 items-center justify-center gap-1 rounded-full bg-[#141416] px-3 py-1 text-[11px] font-semibold text-[#ffffff] transition hover:bg-[#27272a]"
                       >
                         <Zap size={12} /> Jadikan Tugas
                       </button>
@@ -249,19 +253,19 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
             })}
           </div>
 
-          {/* Toolbar */}
-          <div data-ui className="card absolute left-3 top-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1 p-1.5">
+          {/* Toolbar — matte black & pastel dock inspired by Reference 2 */}
+          <div data-ui className="card absolute left-4 top-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-1.5 !rounded-full p-2">
             <ToolBtn active={tool === "select"} onClick={() => setTool("select")} label="Geser & pilih" icon={<Hand size={16} />} />
             <ToolBtn active={tool === "pen"} onClick={() => setTool("pen")} label="Pena" icon={<Pencil size={16} />} />
             <ToolBtn active={tool === "eraser"} onClick={() => setTool("eraser")} label="Hapus coretan" icon={<Eraser size={16} />} />
-            <span className="mx-1 h-5 w-px bg-white/10" />
+            <span className="mx-1 h-5 w-px bg-[#eae8e1] dark:bg-white/10" />
             {tool === "pen" &&
               PEN_COLORS.map((c) => (
                 <button
                   key={c}
                   aria-label={`Warna pena ${c}`}
                   onClick={() => setPenColor(c)}
-                  className={`h-5 w-5 rounded-full ring-offset-1 ring-offset-transparent transition ${penColor === c ? "ring-2 ring-active" : ""}`}
+                  className={`h-6 w-6 rounded-full ring-offset-1 ring-offset-transparent transition ${penColor === c ? "ring-2 ring-[#141416] dark:ring-[#f4f4f6]" : ""}`}
                   style={{ background: strokeColor(c) }}
                 />
               ))}
@@ -270,7 +274,7 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
                 <button
                   key={k}
                   onClick={() => addNote(k)}
-                  className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-900 transition hover:brightness-95"
+                  className="flex items-center gap-1 rounded-full border border-black/[0.06] px-3 py-1.5 text-xs font-semibold text-[#141416] transition hover:brightness-95"
                   style={{ background: NOTE_COLORS[k] }}
                   title={`Tambah catatan: ${KIND_LABEL[k]}`}
                 >
@@ -280,31 +284,31 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
           </div>
 
           {/* Zoom + presence */}
-          <div data-ui className="card absolute bottom-3 left-3 z-20 flex items-center gap-1 p-1">
-            <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => zoomBy(0.85)} aria-label="Perkecil">
+          <div data-ui className="card absolute bottom-4 left-4 z-20 flex items-center gap-1 !rounded-full p-1.5">
+            <button className="rounded-full p-1.5 hover:bg-[#f4f3ee] dark:hover:bg-white/10" onClick={() => zoomBy(0.85)} aria-label="Perkecil">
               <Minus size={15} />
             </button>
-            <button className="w-12 text-xs tabular-nums text-white/70" onClick={() => setView({ x: 20, y: 20, z: 1 })} title="Reset tampilan">
+            <button className="w-12 text-xs font-semibold tabular-nums text-white/75" onClick={() => setView({ x: 20, y: 20, z: 1 })} title="Reset tampilan">
               {Math.round(view.z * 100)}%
             </button>
-            <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => zoomBy(1.15)} aria-label="Perbesar">
+            <button className="rounded-full p-1.5 hover:bg-[#f4f3ee] dark:hover:bg-white/10" onClick={() => zoomBy(1.15)} aria-label="Perbesar">
               <Plus size={15} />
             </button>
           </div>
-          <div data-ui className="card absolute bottom-3 right-3 z-20 flex items-center gap-2 px-2.5 py-1.5">
+          <div data-ui className="card absolute bottom-4 right-4 z-20 flex items-center gap-2.5 !rounded-full px-3.5 py-2">
             <div className="flex -space-x-2">
               {team.map((m) => (
                 <span key={m.userId} className="relative">
-                  <Avatar user={userOf(m.userId)!} size={22} />
-                  <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-safe ring-2 ring-[rgb(var(--surface))]" />
+                  <Avatar user={userOf(m.userId)!} size={24} />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#22c55e] ring-2 ring-[rgb(var(--surface))]" />
                 </span>
               ))}
             </div>
-            <span className="hidden text-[10px] text-white/50 sm:inline">Realtime (simulasi)</span>
+            <span className="hidden text-xs font-medium text-white/55 sm:inline">Realtime (simulasi)</span>
           </div>
 
           {notes.length === 0 && drawings.length === 0 && (
-            <div className="pointer-events-none absolute inset-0 grid place-items-center text-center text-sm text-white/40">
+            <div className="pointer-events-none absolute inset-0 grid place-items-center text-center text-sm text-white/45">
               <div>
                 <StickyNote className="mx-auto mb-2" />
                 Kanvas kosong — tambahkan catatan dari toolbar atau gambar dengan pena.
@@ -326,9 +330,9 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
           )}
 
           {toast && (
-            <div data-ui className="card absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-3 border-safe/40 px-4 py-2.5 text-xs shadow-lg">
-              <Check size={15} className="text-safe" /> {toast}
-              <button className="font-semibold text-active hover:underline" onClick={onGoTasks}>
+            <div data-ui className="card absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-3 !rounded-full px-5 py-2.5 text-xs shadow-lg">
+              <Check size={15} className="text-[#22c55e]" /> {toast}
+              <button className="font-bold underline" onClick={onGoTasks}>
                 Lihat daftar tugas
               </button>
             </div>
@@ -336,21 +340,26 @@ export default function Whiteboard({ competitionId, onGoTasks }: { competitionId
         </div>
       </div>
 
-      <section className="card p-4 sm:p-5" aria-labelledby="top-ideas">
-        <h2 id="top-ideas" className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <Lightbulb size={16} className="text-warn" /> Ide Terpopuler
-          <span className="text-xs font-normal text-white/40">masuk otomatis ke Laporan Pembina</span>
+      <section className="card p-6 sm:p-7" aria-labelledby="top-ideas">
+        <h2 id="top-ideas" className="mb-4 flex items-center gap-2.5 text-base font-bold tracking-tight">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-[#fef4c7] text-[#78350f] dark:bg-[#302615] dark:text-[#fcd34d]">
+            <Lightbulb size={16} />
+          </span>
+          Ide Terpopuler
+          <span className="text-xs font-normal text-white/45">masuk otomatis ke Laporan Pembina</span>
         </h2>
         {ranked.length === 0 ? (
-          <p className="text-xs text-white/40">Belum ada suara. Tekan +1 pada catatan untuk memilih ide terbaik.</p>
+          <p className="text-xs text-white/45">Belum ada suara. Tekan +1 pada catatan untuk memilih ide terbaik.</p>
         ) : (
-          <ol className="grid gap-2 md:grid-cols-3">
+          <ol className="grid gap-3.5 md:grid-cols-3">
             {ranked.map((n, i) => (
-              <li key={n.id} className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-warn/15 text-xs font-bold text-warn">{i + 1}</span>
+              <li key={n.id} className="flex gap-3 rounded-2xl border border-[#eae8e1] bg-[#faf9f6] p-4 dark:border-white/10 dark:bg-[#202024]">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#fef4c7] text-xs font-bold text-[#78350f] dark:bg-[#302615] dark:text-[#fcd34d]">
+                  {i + 1}
+                </span>
                 <div className="min-w-0">
-                  <p className="line-clamp-3 text-xs text-white/80">{n.content || "(kosong)"}</p>
-                  <div className="mt-1.5 flex items-center gap-1.5">
+                  <p className="line-clamp-3 text-xs leading-relaxed text-white/85">{n.content || "(kosong)"}</p>
+                  <div className="mt-2 flex items-center gap-1.5">
                     <Badge tone="active">+{n.votes.length} suara</Badge>
                     {n.taskId && <Badge tone="safe">Sudah jadi tugas</Badge>}
                   </div>
@@ -371,7 +380,11 @@ function ToolBtn({ active, onClick, icon, label }: { active: boolean; onClick: (
       aria-pressed={active}
       title={label}
       aria-label={label}
-      className={`rounded-lg p-2 transition ${active ? "bg-active text-[#fff]" : "text-white/70 hover:bg-white/10"}`}
+      className={`rounded-full p-2.5 transition ${
+        active
+          ? "bg-[#141416] text-[#ffffff] dark:bg-[#f4f4f6] dark:text-[#141416]"
+          : "text-white/70 hover:bg-[#f4f3ee] dark:hover:bg-white/10"
+      }`}
     >
       {icon}
     </button>
@@ -420,16 +433,16 @@ function ConvertPanel({ note, onClose, onDone }: { note: WhiteboardElement; onCl
   }
 
   return (
-    <div data-ui className="card absolute right-3 top-3 z-30 w-[min(20rem,calc(100%-1.5rem))] bg-[var(--modal-bg)] p-4 shadow-xl" role="dialog" aria-label="Jadikan tugas">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <Zap size={15} className="text-active" /> Jadikan Tugas
+    <div data-ui className="card absolute right-4 top-4 z-30 w-[min(21rem,calc(100%-2rem))] bg-[var(--modal-bg)] p-5 shadow-xl" role="dialog" aria-label="Jadikan tugas">
+      <div className="mb-3.5 flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-sm font-bold">
+          <Zap size={15} /> Jadikan Tugas
         </h3>
-        <button onClick={onClose} aria-label="Tutup" className="rounded-lg p-1 text-white/50 hover:bg-white/10">
+        <button onClick={onClose} aria-label="Tutup" className="rounded-full p-1 text-white/50 hover:bg-[#f4f3ee] dark:hover:bg-white/10">
           <X size={16} />
         </button>
       </div>
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <div>
           <label className="label" htmlFor="cv-title">Judul tugas</label>
           <input id="cv-title" className="field" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -444,10 +457,10 @@ function ConvertPanel({ note, onClose, onDone }: { note: WhiteboardElement; onCl
             ))}
           </select>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <div>
             <label className="label" htmlFor="cv-due">Tenggat</label>
-            <input id="cv-due" type="datetime-local" className="field !px-2" value={due} onChange={(e) => setDue(e.target.value)} />
+            <input id="cv-due" type="datetime-local" className="field !px-2.5" value={due} onChange={(e) => setDue(e.target.value)} />
           </div>
           <div>
             <label className="label" htmlFor="cv-pri">Prioritas</label>

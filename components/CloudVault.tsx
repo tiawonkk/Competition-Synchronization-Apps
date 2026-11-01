@@ -19,7 +19,11 @@ const KIND_ICON: Record<ResourceKind, typeof FileText> = {
 const KIND_LABEL: Record<ResourceKind, string> = { guidebook: "Guidebook (PDF)", diagram: "Diagram / Desain", deck: "Pitch Deck", zip: "Source Code / ZIP", other: "Lainnya" };
 
 const PROVIDER_LABEL: Record<Provider, string> = { onedrive: "OneDrive Pro", gdrive: "Google Drive", supabase: "Supabase Storage" };
-const PROVIDER_STYLE: Record<Provider, string> = { onedrive: "bg-active/15 text-active", gdrive: "bg-safe/15 text-safe", supabase: "bg-warn/15 text-warn" };
+const PROVIDER_STYLE: Record<Provider, string> = {
+  onedrive: "bg-[#dff0ff] text-[#1e3a8a] dark:bg-[#172736] dark:text-[#93c5fd]",
+  gdrive: "bg-[#dcfce7] text-[#14532d] dark:bg-[#142e22] dark:text-[#86efac]",
+  supabase: "bg-[#fef4c7] text-[#78350f] dark:bg-[#302615] dark:text-[#fcd34d]",
+};
 
 type Filter = "all" | Provider;
 
@@ -37,15 +41,15 @@ export default function CloudVault({ competitionId }: { competitionId: string })
   const count = (p: Provider) => all.filter((r) => r.provider === p).length;
 
   return (
-    <section className="card p-4 sm:p-5" aria-labelledby="vault-h">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 id="vault-h" className="text-sm font-semibold">
+    <section className="card p-6 sm:p-7" aria-labelledby="vault-h">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="vault-h" className="text-base font-bold tracking-tight">
           Cloud Vault
         </h2>
         <div className="flex flex-wrap gap-2">
           {isLeader && (
             <button className="btn-ghost !py-1.5 text-xs" onClick={() => setReaderOpen(true)}>
-              <Sparkles size={15} className="text-active" /> Baca Guidebook (AI)
+              <Sparkles size={15} /> Baca Guidebook (AI)
             </button>
           )}
           <button className="btn-ghost !py-1.5 text-xs" onClick={() => setBigOpen(true)}>
@@ -57,12 +61,12 @@ export default function CloudVault({ competitionId }: { competitionId: string })
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        <FolderCard url={comp.onedriveFolderUrl} name="OneDrive Pro" hint="Folder bersama Microsoft 365 Binus" tone="active" />
-        <FolderCard url={comp.gdriveFolderUrl} name="Google Drive" hint="Folder bersama akun Gmail" tone="safe" />
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <FolderCard url={comp.onedriveFolderUrl} name="OneDrive Pro" hint="Folder bersama Microsoft 365 Binus" tone="sky" />
+        <FolderCard url={comp.gdriveFolderUrl} name="Google Drive" hint="Folder bersama akun Gmail" tone="mint" />
       </div>
 
-      <div className="mb-2 mt-5 flex flex-wrap gap-1.5" role="tablist" aria-label="Filter penyimpanan">
+      <div className="mb-3 mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Filter penyimpanan">
         {(
           [
             ["all", `Semua (${all.length})`],
@@ -76,36 +80,40 @@ export default function CloudVault({ competitionId }: { competitionId: string })
             role="tab"
             aria-selected={filter === id}
             onClick={() => setFilter(id)}
-            className={`rounded-full border px-3 py-1 text-xs transition ${filter === id ? "border-active bg-active/15 text-active" : "border-white/10 text-white/60 hover:bg-white/10"}`}
+            className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+              filter === id
+                ? "border-[#141416] bg-[#141416] text-[#ffffff] dark:border-[#f4f4f6] dark:bg-[#f4f4f6] dark:text-[#141416]"
+                : "border-[#e4e2dc] bg-[#faf9f6] text-white/65 hover:bg-[#f0efea] dark:border-white/10 dark:bg-[#202024]"
+            }`}
           >
             {label}
           </button>
         ))}
       </div>
 
-      <ul className="space-y-1.5">
+      <ul className="space-y-2">
         {files.map((r) => {
           const Icon = KIND_ICON[r.kind];
           const adder = data.users.find((u) => u.id === r.addedBy);
           return (
             <li key={r.id}>
               <RowLink url={r.url}>
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${PROVIDER_STYLE[r.provider]}`}>
-                  <Icon size={17} />
+                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${PROVIDER_STYLE[r.provider]}`}>
+                  <Icon size={18} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{r.title}</span>
-                  <span className="text-[11px] text-white/45">
+                  <span className="block truncate text-sm font-semibold">{r.title}</span>
+                  <span className="text-xs text-white/50">
                     {PROVIDER_LABEL[r.provider]} · {r.meta}
                     {adder ? ` · oleh ${adder.fullName.split(" ")[0]}` : ""}
                   </span>
                 </span>
-                {r.simulated ? <Badge tone="warn">Simulasi</Badge> : <ExternalLink size={14} className="text-white/20 group-hover:text-white/70" />}
+                {r.simulated ? <Badge tone="warn">Simulasi</Badge> : <ExternalLink size={15} className="text-white/30 group-hover:text-white/80" />}
               </RowLink>
             </li>
           );
         })}
-        {files.length === 0 && <li className="py-6 text-center text-xs text-white/40">Belum ada berkas di sini. Tambahkan tautan guidebook, deck, atau ZIP tim.</li>}
+        {files.length === 0 && <li className="py-8 text-center text-xs text-white/45">Belum ada berkas di sini. Tambahkan tautan guidebook, deck, atau ZIP tim.</li>}
       </ul>
 
       <AddFileModal open={adding} competitionId={competitionId} onClose={() => setAdding(false)} />
@@ -117,7 +125,7 @@ export default function CloudVault({ competitionId }: { competitionId: string })
 
 /** A vault row: a link when the file has a cloud URL, a plain row for demo uploads that have none. */
 function RowLink({ url, children }: { url: string; children: React.ReactNode }) {
-  const cls = "group flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-white/[0.06]";
+  const cls = "group flex items-center gap-3.5 rounded-2xl border border-[#eae8e1] bg-[#faf9f6] px-4 py-3 transition hover:bg-[#ffffff] hover:shadow-sm dark:border-white/10 dark:bg-[#202024] dark:hover:bg-[#25252a]";
   return url ? (
     <a href={url} target="_blank" rel="noreferrer" className={cls}>
       {children}
@@ -127,22 +135,29 @@ function RowLink({ url, children }: { url: string; children: React.ReactNode }) 
   );
 }
 
-function FolderCard({ url, name, hint, tone }: { url?: string; name: string; hint: string; tone: "active" | "safe" }) {
-  const cls = tone === "active" ? "border-active/30 bg-active/10 hover:bg-active/20 text-active" : "border-safe/30 bg-safe/10 hover:bg-safe/20 text-safe";
+function FolderCard({ url, name, hint, tone }: { url?: string; name: string; hint: string; tone: "sky" | "mint" }) {
   if (!url) {
     return (
-      <div className="rounded-xl border border-dashed border-white/15 p-3 text-xs text-white/40">
-        <FolderOpen size={18} />
-        <div className="mt-1.5 font-semibold">{name}</div>
+      <div className="rounded-[24px] border border-dashed border-[#d4d2ca] bg-[#faf9f6]/60 p-4 text-xs text-white/45 dark:border-white/15 dark:bg-white/[0.02]">
+        <FolderOpen size={19} />
+        <div className="mt-2 font-bold text-white/75">{name}</div>
         Folder belum ditautkan
       </div>
     );
   }
   return (
-    <a href={url} target="_blank" rel="noreferrer" className={`rounded-xl border p-3 transition ${cls}`}>
-      <FolderOpen size={18} />
-      <div className="mt-1.5 text-xs font-semibold text-white">{name}</div>
-      <div className="text-[10px] text-white/50">{hint}</div>
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      style={{ background: `var(--tile-${tone})` }}
+      className="rounded-[24px] border border-black/[0.05] p-4 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-white/10"
+    >
+      <span className="grid h-9 w-9 place-items-center rounded-full bg-[#ffffff]/80 text-[#141416] shadow-sm dark:bg-[#141416]/40 dark:text-[#f4f4f6]">
+        <FolderOpen size={17} />
+      </span>
+      <div className="mt-2.5 text-sm font-bold">{name}</div>
+      <div className="mt-0.5 text-xs text-white/60">{hint}</div>
     </a>
   );
 }
@@ -174,7 +189,7 @@ function AddFileModal({ open, competitionId, onClose }: { open: boolean; competi
 
   return (
     <Modal open={open} onClose={onClose} title="Tambah Link Berkas">
-      <div className="space-y-3 p-5">
+      <div className="space-y-4 p-6">
         <div>
           <label className="label" htmlFor="f-title">Nama berkas</label>
           <input id="f-title" className="field" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="mis. Pitch Deck v2.pptx" autoFocus />
@@ -186,7 +201,7 @@ function AddFileModal({ open, competitionId, onClose }: { open: boolean; competi
           {touched && !urlOk && <p className="mt-1 text-xs text-danger">Gunakan tautan https dari drive.google.com, docs.google.com, 1drv.ms, atau SharePoint Binus.</p>}
           {urlOk && <p className="mt-1 text-xs text-safe">Terdeteksi: {provider === "gdrive" ? "Google Drive" : "OneDrive Pro"}</p>}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3.5">
           <div>
             <label className="label" htmlFor="f-kind">Jenis</label>
             <select id="f-kind" className="field" value={kind} onChange={(e) => setKind(e.target.value as ResourceKind)}>
@@ -202,7 +217,7 @@ function AddFileModal({ open, competitionId, onClose }: { open: boolean; competi
             <input id="f-meta" className="field" value={meta} onChange={(e) => setMeta(e.target.value)} placeholder="PDF · 2 MB" />
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-1">
+        <div className="flex justify-end gap-2 pt-2">
           <button className="btn-ghost" onClick={onClose}>
             Batal
           </button>

@@ -246,16 +246,16 @@ export default function CreateCompetitionModal({ open, onClose, onCreated }: { o
     <Modal open={open} onClose={onClose} title="Buat Lomba Baru" wide footer={footer}>
       <div className="space-y-5 p-5">
         {/* Guidebook first: one upload fills the whole form. */}
-        <section className="rounded-2xl border border-active/25 bg-active/[0.06] p-4" aria-labelledby="gb-h">
+        <section className="rounded-[24px] border border-black/[0.06] p-5 dark:border-white/10" style={{ background: "var(--tile-lav)" }} aria-labelledby="gb-h">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 id="gb-h" className="text-sm font-bold">✨ Isi form otomatis dari Guidebook</h3>
-            <span className="text-[11px] text-white/45">PDF, TXT, atau MD · teks dikirim ke Google Gemini, jangan unggah dokumen rahasia</span>
+            <span className="text-[11px] text-white/55">PDF, TXT, atau MD · teks dikirim ke Google Gemini, jangan unggah dokumen rahasia</span>
           </div>
-          <label className={`mt-3 flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-active/30 px-4 py-4 transition hover:bg-active/[0.06] ${reading ? "pointer-events-none opacity-70" : ""}`}>
-            {reading ? <Loader2 size={20} className="animate-spin text-active" /> : <FileUp size={20} className="text-active" />}
+          <label className={`mt-3 flex cursor-pointer items-center gap-3.5 rounded-2xl border border-dashed border-black/20 bg-[#ffffff]/75 px-4 py-4 transition hover:bg-[#ffffff] dark:border-white/20 dark:bg-[#141416]/50 dark:hover:bg-[#141416]/70 ${reading ? "pointer-events-none opacity-70" : ""}`}>
+            {reading ? <Loader2 size={20} className="animate-spin" /> : <FileUp size={20} />}
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold">{fileName || "Pilih atau seret berkas guidebook ke sini"}</span>
-              <span className="block text-xs text-white/50">Nama lomba, kategori, tema, deadline, babak, rubrik, dan tugas akan terisi sendiri.</span>
+              <span className="block truncate text-sm font-bold">{fileName || "Pilih atau seret berkas guidebook ke sini"}</span>
+              <span className="block text-xs text-white/55">Nama lomba, kategori, tema, deadline, babak, rubrik, dan tugas akan terisi sendiri.</span>
             </span>
             <input
               type="file"

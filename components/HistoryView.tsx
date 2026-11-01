@@ -30,12 +30,12 @@ export default function HistoryView({ onEvaluate, onOpen }: { onEvaluate: (ctx: 
 
   if (rows.length === 0) {
     return (
-      <div className="card mx-auto mt-6 max-w-2xl p-8 text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-active/15 text-active">
-          <Trophy size={26} />
+      <div className="card mx-auto mt-8 max-w-2xl p-10 text-center">
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-[#fef4c7] text-[#78350f] dark:bg-[#302615] dark:text-[#fcd34d]">
+          <Trophy size={28} />
         </span>
-        <h2 className="mt-4 text-xl font-bold">Belum ada lomba yang selesai</h2>
-        <p className="mx-auto mt-1 max-w-md text-sm text-white/60">
+        <h2 className="mt-5 text-2xl font-bold tracking-tight">Belum ada lomba yang selesai</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-white/60">
           Setelah tim menekan <strong>Selesaikan Lomba</strong> atau gugur di suatu babak, hasil, peringkat, dan evaluasinya tersimpan di sini sebagai portofolio dan bahan belajar.
         </p>
       </div>
@@ -43,37 +43,43 @@ export default function HistoryView({ onEvaluate, onOpen }: { onEvaluate: (ctx: 
   }
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon={<Trophy size={16} />} label="Lomba selesai" value={String(stats.total)} bg="lav" />
-        <Stat icon={<Award size={16} />} label="Win rate (juara/award)" value={`${stats.winRate}%`} bg="mint" />
-        <Stat icon={<Target size={16} />} label="Capai final" value={`${stats.reachFinalRate}%`} bg="sky" />
-        <Stat icon={<TrendingUp size={16} />} label="Tugas selesai telat" value={`${stats.lateRate}%`} bg={stats.lateRate > 30 ? "peach" : "cream"} />
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat icon={<Trophy size={17} />} label="Lomba selesai" value={String(stats.total)} bg="lav" />
+        <Stat icon={<Award size={17} />} label="Win rate (juara/award)" value={`${stats.winRate}%`} bg="mint" />
+        <Stat icon={<Target size={17} />} label="Capai final" value={`${stats.reachFinalRate}%`} bg="sky" />
+        <Stat icon={<TrendingUp size={17} />} label="Tugas selesai telat" value={`${stats.lateRate}%`} bg={stats.lateRate > 30 ? "peach" : "cream"} />
       </div>
 
       <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-        <input className="field !pl-10" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari pelajaran, kendala, nama lomba, atau hasil…" aria-label="Cari riwayat dan evaluasi" />
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+        <input
+          className="field !rounded-full !bg-[#ffffff] !py-3 !pl-11 shadow-sm dark:!bg-[#18181b]"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Cari pelajaran, kendala, nama lomba, atau hasil…"
+          aria-label="Cari riwayat dan evaluasi"
+        />
       </div>
 
-      {shown.length === 0 && <p className="py-6 text-center text-sm text-white/45">Tidak ada evaluasi yang cocok dengan pencarian.</p>}
+      {shown.length === 0 && <p className="py-8 text-center text-sm text-white/45">Tidak ada evaluasi yang cocok dengan pencarian.</p>}
 
-      <ul className="space-y-4">
+      <ul className="space-y-5">
         {shown.map(({ e, comp }) => {
           const stages = data.stages.filter((s) => s.competitionId === comp.id).sort((a, b) => a.orderIndex - b.orderIndex);
           const leader = data.members.some((m) => m.competitionId === comp.id && m.userId === me && m.role === "leader");
           return (
-            <li key={e.id} className="card p-4 sm:p-5">
+            <li key={e.id} className="card p-6 sm:p-7">
               <div className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={OUTCOME_WIN[e.outcome] ? "safe" : e.outcome === "finalis" ? "active" : "warn"}>{OUTCOME_LABEL[e.outcome]}</Badge>
                     <span className="text-xs text-white/45">{comp.category} · selesai {fmtLong(e.completedAt)}</span>
                   </div>
-                  <button className="mt-1 text-left text-lg font-bold hover:underline" onClick={() => onOpen(comp.id)}>
+                  <button className="mt-2 text-left text-xl font-bold tracking-tight hover:underline" onClick={() => onOpen(comp.id)}>
                     {comp.title}
                   </button>
-                  <div className="text-sm text-white/60">
+                  <div className="mt-0.5 text-sm text-white/60">
                     {[e.rank, e.score && `Skor ${e.score}`].filter(Boolean).join(" · ") || "Peringkat belum dicatat"}
                   </div>
                 </div>
@@ -84,7 +90,7 @@ export default function HistoryView({ onEvaluate, onOpen }: { onEvaluate: (ctx: 
                 )}
               </div>
 
-              <ol className="mt-3 flex flex-wrap gap-1.5" aria-label="Perjalanan babak">
+              <ol className="mt-4 flex flex-wrap gap-2" aria-label="Perjalanan babak">
                 {stages.map((s) => (
                   <li key={s.id}>
                     <Badge tone={s.status === "passed" ? "safe" : s.status === "eliminated" ? "danger" : "neutral"}>
@@ -94,16 +100,16 @@ export default function HistoryView({ onEvaluate, onOpen }: { onEvaluate: (ctx: 
                 ))}
               </ol>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <Note title="✅ Berjalan baik" text={e.wentWell} />
-                <Note title="⚠️ Kendala" text={e.wentWrong} />
-                <Note title="💬 Masukan juri" text={e.judgeFeedback} />
+              <div className="mt-5 grid gap-3.5 md:grid-cols-3">
+                <Note title="✅ Berjalan baik" text={e.wentWell} bg="var(--tile-mint)" />
+                <Note title="⚠️ Kendala" text={e.wentWrong} bg="var(--tile-peach)" />
+                <Note title="💬 Masukan juri" text={e.judgeFeedback} bg="var(--tile-lav)" />
               </div>
 
               {e.insights && e.insights.length > 0 && (
-                <div className="mt-3 rounded-2xl bg-active/[0.07] p-3.5">
-                  <div className="text-xs font-semibold text-active">Saran untuk lomba berikutnya</div>
-                  <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
+                <div className="mt-4 rounded-2xl bg-[#faf9f6] border border-[#eae8e1] p-4 dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="text-xs font-bold text-white/80">Saran untuk lomba berikutnya</div>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-white/75">
                     {e.insights.map((i) => (
                       <li key={i}>{i}</li>
                     ))}
@@ -112,14 +118,14 @@ export default function HistoryView({ onEvaluate, onOpen }: { onEvaluate: (ctx: 
               )}
 
               {(e.certificateUrl || e.archiveUrl) && (
-                <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
                   {e.certificateUrl && (
-                    <a href={e.certificateUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-active hover:underline">
+                    <a href={e.certificateUrl} target="_blank" rel="noreferrer" className="btn-ghost !px-3.5 !py-1.5 text-xs">
                       <ExternalLink size={12} /> Sertifikat
                     </a>
                   )}
                   {e.archiveUrl && (
-                    <a href={e.archiveUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-active hover:underline">
+                    <a href={e.archiveUrl} target="_blank" rel="noreferrer" className="btn-ghost !px-3.5 !py-1.5 text-xs">
                       <ExternalLink size={12} /> Arsip karya final
                     </a>
                   )}
@@ -133,23 +139,23 @@ export default function HistoryView({ onEvaluate, onOpen }: { onEvaluate: (ctx: 
   );
 }
 
-function Note({ title, text }: { title: string; text: string }) {
+function Note({ title, text, bg }: { title: string; text: string; bg: string }) {
   return (
-    <div className="rounded-2xl bg-white/[0.04] p-3">
-      <div className="text-xs font-semibold text-white/60">{title}</div>
-      <p className="mt-1 whitespace-pre-line text-sm">{text || <span className="text-white/35">Belum diisi.</span>}</p>
+    <div className="rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.05]" style={{ background: bg }}>
+      <div className="text-xs font-bold text-white/75">{title}</div>
+      <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed">{text || <span className="text-white/45">Belum diisi.</span>}</p>
     </div>
   );
 }
 
 function Stat({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: string; bg: "lav" | "mint" | "cream" | "peach" | "sky" }) {
   return (
-    <div className="rounded-3xl p-4 sm:p-5" style={{ background: `var(--tile-${bg})` }}>
-      <div className="flex items-center gap-2 text-xs font-semibold text-white/70">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-[#fff]/60 text-[#1c1c22] dark:bg-[#fff]/10 dark:text-[#fff]">{icon}</span>
+    <div className="rounded-[28px] border border-black/[0.04] p-5 sm:p-6 shadow-sm dark:border-white/[0.06]" style={{ background: `var(--tile-${bg})` }}>
+      <div className="flex items-center gap-2.5 text-xs font-semibold text-[#141416]/80 dark:text-[#f4f4f6]/85">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#ffffff]/85 text-[#141416] shadow-sm dark:bg-[#141416]/50 dark:text-[#f4f4f6]">{icon}</span>
         {label}
       </div>
-      <div className="mt-3 text-4xl font-extrabold tabular-nums">{value}</div>
+      <div className="mt-4 text-4xl font-extrabold tracking-tight tabular-nums text-[#141416] dark:text-[#f4f4f6]">{value}</div>
     </div>
   );
 }

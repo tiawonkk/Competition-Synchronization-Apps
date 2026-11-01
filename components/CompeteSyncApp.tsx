@@ -97,6 +97,7 @@ function Shell() {
       setView({ kind: "dashboard" });
     }
   }, [view, data.competitions, setView]);
+
   const [completeId, setCompleteId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -205,93 +206,151 @@ function Shell() {
   const title = current ? current.title : view.kind === "history" ? "Riwayat & Evaluasi" : "Beranda";
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1600px] lg:gap-2 lg:p-3">
+    <div className="mx-auto flex min-h-screen max-w-[1560px] lg:gap-6 lg:p-5">
       {/* Desktop sidebar (collapsible) */}
       <aside
-        className={`glass-panel sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 flex-col rounded-[28px] p-3 transition-[width] duration-200 lg:flex ${collapsed ? "w-[72px]" : "w-64"}`}
+        className={`glass-panel sticky top-5 hidden h-[calc(100vh-2.5rem)] shrink-0 flex-col rounded-[32px] p-4 transition-[width] duration-200 lg:flex ${
+          collapsed ? "w-[82px]" : "w-[268px]"
+        }`}
       >
-        <div className={`mb-5 flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-2"}`}>
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-900 shadow-md shadow-amber-500/20">
-            <Trophy size={18} />
+        <div className={`mb-6 flex items-center ${collapsed ? "justify-center" : "gap-3 px-2"}`}>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#141416] text-[#ffffff] shadow-sm dark:bg-[#f4f4f6] dark:text-[#141416]">
+            <Trophy size={19} />
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-base font-bold leading-tight text-slate-900 dark:text-white">CompeteSync</div>
-              <div className="text-[11px] text-slate-500 dark:text-white/45">Kelola lomba bersama tim</div>
+              <div className="text-base font-bold leading-tight tracking-tight">CompeteSync</div>
+              <div className="mt-0.5 text-xs text-white/50">Kelola lomba bersama tim</div>
             </div>
           )}
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto">
-          <NavButton collapsed={collapsed} active={!current && view.kind === "dashboard"} onClick={() => setView({ kind: "dashboard" })} icon={<LayoutDashboard size={18} />} label="Beranda" />
-          <NavButton collapsed={collapsed} active={view.kind === "history"} onClick={() => setView({ kind: "history" })} icon={<History size={18} />} label="Riwayat & Evaluasi" />
-          {!collapsed && <div className="px-3 pb-1 pt-4 text-xs font-semibold text-slate-400 dark:text-white/40">Lomba Saya</div>}
-          {collapsed && <div className="mx-3 my-3 h-px bg-slate-200 dark:bg-white/10" />}
+
+        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+          <NavButton
+            collapsed={collapsed}
+            active={!current && view.kind === "dashboard"}
+            onClick={() => setView({ kind: "dashboard" })}
+            icon={<LayoutDashboard size={18} />}
+            label="Beranda"
+          />
+          <NavButton
+            collapsed={collapsed}
+            active={view.kind === "history"}
+            onClick={() => setView({ kind: "history" })}
+            icon={<History size={18} />}
+            label="Riwayat & Evaluasi"
+          />
+
+          {!collapsed ? (
+            <div className="px-3 pb-1.5 pt-5 text-[11px] font-semibold uppercase tracking-wider text-white/40">Lomba Saya</div>
+          ) : (
+            <div className="mx-3 my-3 h-px bg-[#eae8e1] dark:bg-white/10" />
+          )}
+
           {active.map((c) => {
             const s = readiness(c.id);
+            const isAct = current?.id === c.id;
             return (
               <NavButton
                 key={c.id}
                 collapsed={collapsed}
-                active={current?.id === c.id}
+                active={isAct}
                 onClick={() => open(c.id)}
                 icon={<span className="h-2.5 w-2.5 rounded-full" style={{ background: c.accent }} />}
                 label={c.title}
-                trailing={<span className="text-[11px] tabular-nums" style={{ color: TONE[scoreTone(s)].hex }}>{s}%</span>}
+                trailing={
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+                      isAct ? "bg-[#ffffff]/20 text-[#ffffff] dark:bg-[#141416]/15 dark:text-[#141416]" : "bg-[#f3f2ee] text-[#3f3f46] dark:bg-[#27272a] dark:text-[#d4d4d8]"
+                    }`}
+                  >
+                    {s}%
+                  </span>
+                }
               />
             );
           })}
-          {active.length === 0 && !collapsed && <p className="px-3 py-2 text-xs text-slate-400 dark:text-white/35">Belum ada lomba.</p>}
-          <button className="btn-primary mt-3 w-full" onClick={() => setCreateOpen(true)} title="Buat Lomba Baru">
-            <Plus size={16} /> {!collapsed && "Buat Lomba Baru"}
-          </button>
-          <button className="btn-ghost mt-2 w-full" onClick={() => setJoinOpen(true)} title="Gabung Lomba">
-            <KeyRound size={16} /> {!collapsed && "Gabung Lomba"}
-          </button>
+          {active.length === 0 && !collapsed && <p className="px-3 py-2 text-xs text-white/40">Belum ada lomba aktif.</p>}
+
+          <div className="pt-3 space-y-2">
+            <button
+              className={`btn-primary w-full ${collapsed ? "!h-11 !w-11 !p-0 mx-auto flex" : ""}`}
+              onClick={() => setCreateOpen(true)}
+              title="Buat Lomba Baru"
+            >
+              <Plus size={17} /> {!collapsed && "Buat Lomba Baru"}
+            </button>
+            <button
+              className={`btn-ghost w-full ${collapsed ? "!h-11 !w-11 !p-0 mx-auto flex" : ""}`}
+              onClick={() => setJoinOpen(true)}
+              title="Gabung Lomba"
+            >
+              <KeyRound size={16} /> {!collapsed && "Gabung Lomba"}
+            </button>
+          </div>
         </nav>
-        <div className={`mt-3 flex items-center gap-1.5 ${collapsed ? "flex-col" : ""}`}>
+
+        <div className={`mt-4 flex items-center gap-1.5 pt-3 border-t border-[#eae8e1] dark:border-white/10 ${collapsed ? "flex-col" : ""}`}>
           <div className={collapsed ? "" : "min-w-0 flex-1"}>
             <ProfileMenu placement="up">
               {() =>
                 collapsed ? (
-                  <Avatar user={user} size={32} />
+                  <Avatar user={user} size={34} />
                 ) : (
-                  <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-100/70 dark:bg-white/[0.07] p-2 transition hover:bg-slate-200/80 dark:hover:bg-white/[0.12]">
-                    <Avatar user={user} size={30} />
+                  <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#f6f5f0] p-2 transition hover:bg-[#eceae2] dark:bg-[#222226] dark:hover:bg-[#2c2c32]">
+                    <Avatar user={user} size={32} />
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-semibold text-slate-800 dark:text-white">{user.fullName}</div>
-                      <div className="truncate text-[10px] text-slate-500 dark:text-white/45">{userEmail(user)}</div>
+                      <div className="truncate text-xs font-bold">{user.fullName}</div>
+                      <div className="truncate text-[11px] text-white/50">{userEmail(user)}</div>
                     </div>
                   </div>
                 )
               }
             </ProfileMenu>
           </div>
-          <button className="rounded-xl p-2 text-slate-400 dark:text-white/50 hover:bg-danger/15 hover:text-danger transition-colors" onClick={() => dispatch({ type: "logout" })} aria-label="Keluar" title="Keluar">
-            <LogOut size={18} />
+          <button
+            className="rounded-full p-2.5 text-white/50 transition-colors hover:bg-[#fce4ec] hover:text-[#881337] dark:hover:bg-[#3b1824] dark:hover:text-[#fda4af]"
+            onClick={() => dispatch({ type: "logout" })}
+            aria-label="Keluar"
+            title="Keluar"
+          >
+            <LogOut size={17} />
           </button>
-          <button className="rounded-lg p-2 text-slate-400 dark:text-white/50 hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors" onClick={toggleSidebar} aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}>
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          <button
+            className="rounded-full p-2.5 text-white/50 transition-colors hover:bg-[#f4f3ee] hover:text-[#141416] dark:hover:bg-[#27272a] dark:hover:text-[#f4f4f6]"
+            onClick={toggleSidebar}
+            aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+            title={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+          >
+            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-8 lg:px-6 lg:pb-8 lg:pt-4">
-        <header className="glass-panel mb-6 flex flex-wrap items-center gap-2.5 rounded-2xl p-3 px-4 shadow-sm">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-active/10 text-active lg:hidden">
-            <Trophy size={16} />
+      <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-8 lg:px-2 lg:pb-10 lg:pt-1">
+        <header className="glass-panel mb-6 flex flex-wrap items-center gap-3 rounded-[28px] px-5 py-3.5">
+          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#141416] text-[#ffffff] dark:bg-[#f4f4f6] dark:text-[#141416] lg:hidden">
+            <Trophy size={17} />
           </span>
-          <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold tracking-tight sm:text-2xl text-slate-900 dark:text-white">{title}</h1>
-          <button className="btn-primary hidden xl:inline-flex" onClick={() => setCreateOpen(true)}>
-            <Plus size={16} /> Buat Lomba Baru
-          </button>
-          <button className="btn-ghost hidden xl:inline-flex" onClick={() => setJoinOpen(true)}>
-            <KeyRound size={16} /> Gabung Lomba
-          </button>
-          <button className={armed ? "btn-safe" : "btn-ghost"} onClick={arm} aria-pressed={armed} title="Aktifkan suara alarm (butuh klik pertama dari browser)">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">{title}</h1>
+          </div>
+
+          <button
+            className={armed ? "btn-safe" : "btn-ghost"}
+            onClick={arm}
+            aria-pressed={armed}
+            title="Aktifkan suara alarm (butuh klik pertama dari browser)"
+          >
             {armed ? <Volume2 size={16} /> : <VolumeX size={16} />}
             <span className="hidden sm:inline">{armed ? "Alarm Aktif" : "Aktifkan Alarm"}</span>
           </button>
-          <button className="btn-ghost !px-2.5" onClick={toggleTheme} aria-label={theme === "light" ? "Beralih ke mode gelap" : "Beralih ke mode terang"} title={theme === "light" ? "Mode gelap" : "Mode terang"}>
+          <button
+            className="btn-ghost !h-10 !w-10 !p-0"
+            onClick={toggleTheme}
+            aria-label={theme === "light" ? "Beralih ke mode gelap" : "Beralih ke mode terang"}
+            title={theme === "light" ? "Mode gelap" : "Mode terang"}
+          >
             {theme === "light" ? <Moon size={17} /> : <Sun size={17} />}
           </button>
           <div className="lg:hidden">
@@ -300,9 +359,11 @@ function Shell() {
         </header>
 
         {!armed && (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-warn/30 bg-warn/10 p-3 text-xs text-warn">
-            <BellRing size={16} className="shrink-0" />
-            <span>
+          <div className="mb-6 flex items-center gap-3.5 rounded-[22px] border border-[#f5e39b] bg-[#fef4c7] px-5 py-3.5 text-xs text-[#5c4012] dark:border-[#4d3b1e] dark:bg-[#302615] dark:text-[#fcd34d]">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#ffffff]/80 text-[#78350f] dark:bg-[#ffffff]/10 dark:text-[#fcd34d]">
+              <BellRing size={15} />
+            </span>
+            <span className="leading-relaxed">
               Klik <strong>Aktifkan Alarm</strong> agar browser mengizinkan suara. Tugas Anda yang jatuh tempo &lt; 24 jam akan berdering otomatis, atau pakai tombol{" "}
               <strong>Uji Alarm</strong> pada tugas mana pun.
             </span>
@@ -314,12 +375,21 @@ function Shell() {
         ) : !current ? (
           <Dashboard onOpen={open} onComplete={setCompleteId} onCreate={() => setCreateOpen(true)} onJoin={() => setJoinOpen(true)} />
         ) : (
-          <Workspace key={current.id} competitionId={current.id} onComplete={setCompleteId} onTestAlarm={testAlarm} onReport={() => setReportId(current.id)} onEdit={() => setEditId(current.id)} onEvaluate={setEvalCtx} onAddStage={() => setStageFor(current.id)} />
+          <Workspace
+            key={current.id}
+            competitionId={current.id}
+            onComplete={setCompleteId}
+            onTestAlarm={testAlarm}
+            onReport={() => setReportId(current.id)}
+            onEdit={() => setEditId(current.id)}
+            onEvaluate={setEvalCtx}
+            onAddStage={() => setStageFor(current.id)}
+          />
         )}
       </main>
 
       {/* Mobile bottom bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[rgb(var(--surface))] lg:hidden" aria-label="Navigasi utama">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#eae8e1] bg-[#ffffff] dark:border-white/10 dark:bg-[#18181b] lg:hidden" aria-label="Navigasi utama">
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
           <MobileTab active={!current && view.kind === "dashboard"} onClick={() => setView({ kind: "dashboard" })} label="Beranda" icon={<LayoutDashboard size={20} />} />
           <MobileTab active={view.kind === "history"} onClick={() => setView({ kind: "history" })} label="Riwayat" icon={<History size={20} />} />
@@ -366,7 +436,7 @@ function Shell() {
         }}
       />
       {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-24 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 rounded-2xl bg-[#1c1c20] px-4 py-3 text-sm font-medium text-[#fff] shadow-xl lg:bottom-8">
+        <div role="status" aria-live="polite" className="fixed bottom-24 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 rounded-full bg-[#141416] px-5 py-3 text-sm font-medium text-[#ffffff] shadow-xl lg:bottom-8">
           {toast}
         </div>
       )}
@@ -374,19 +444,35 @@ function Shell() {
   );
 }
 
-function NavButton({ active, onClick, icon, label, trailing, collapsed }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; trailing?: React.ReactNode; collapsed: boolean }) {
+function NavButton({
+  active,
+  onClick,
+  icon,
+  label,
+  trailing,
+  collapsed,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  trailing?: React.ReactNode;
+  collapsed: boolean;
+}) {
   return (
     <button
       onClick={onClick}
       title={label}
       aria-current={active ? "page" : undefined}
-      className={`flex w-full items-center gap-2.5 rounded-xl py-2.5 text-left text-sm transition ${collapsed ? "justify-center px-0" : "px-3"} ${
+      className={`flex items-center gap-3 rounded-2xl text-left text-sm transition-all ${
+        collapsed ? "mx-auto h-11 w-11 justify-center px-0" : "w-full px-3.5 py-2.5"
+      } ${
         active
-          ? "border border-indigo-200/90 bg-indigo-50/90 font-semibold text-indigo-700 shadow-sm dark:border-white/[0.15] dark:bg-white/[0.12] dark:text-white"
-          : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white"
+          ? "bg-[#141416] font-semibold text-[#ffffff] shadow-sm dark:bg-[#f4f4f6] dark:text-[#141416]"
+          : "text-[#52525b] hover:bg-[#f4f3ee] hover:text-[#141416] dark:text-[#a1a1aa] dark:hover:bg-[#27272a] dark:hover:text-[#f4f4f6]"
       }`}
     >
-      <span className="grid w-5 place-items-center">{icon}</span>
+      <span className="grid w-5 shrink-0 place-items-center">{icon}</span>
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
       {!collapsed && trailing}
     </button>
@@ -395,7 +481,13 @@ function NavButton({ active, onClick, icon, label, trailing, collapsed }: { acti
 
 function MobileTab({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
-    <button onClick={onClick} className={`flex min-w-0 flex-1 flex-col items-center gap-1 py-2 text-[10px] ${active ? "text-indigo-600 dark:text-active font-semibold" : "text-slate-500 dark:text-white/50"}`} aria-current={active ? "page" : undefined}>
+    <button
+      onClick={onClick}
+      className={`flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10px] ${
+        active ? "font-bold text-[#141416] dark:text-[#f4f4f6]" : "text-[#71717a] dark:text-[#a1a1aa]"
+      }`}
+      aria-current={active ? "page" : undefined}
+    >
       {icon}
       <span className="max-w-full truncate">{label}</span>
     </button>

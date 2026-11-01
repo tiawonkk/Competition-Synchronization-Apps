@@ -1,13 +1,13 @@
 import type { AdvisorReport, Competition, Evaluation, Member, Milestone, Notice, Resource, Stage, Task, User, WhiteboardElement } from "./types";
 
 export const TEAM_ROLES = ["Hustler / Lead", "Hacker / AI & Backend", "Hipster / UI-UX", "Researcher"] as const;
-export const AVATAR_COLORS = ["#3B82F6", "#EC4899", "#10B981", "#F59E0B", "#8B5CF6", "#06B6D4", "#EF4444", "#14B8A6"];
+export const AVATAR_COLORS = ["#18181B", "#6D28D9", "#047857", "#B45309", "#1D4ED8", "#BE185D", "#0F766E", "#4338CA"];
 
 export const NOTE_COLORS: Record<NonNullable<WhiteboardElement["kind"]>, string> = {
-  ide: "#FEF08A",
-  fitur: "#BFDBFE",
-  riset: "#BBF7D0",
-  kendala: "#FECDD3",
+  ide: "#FEF4C7",
+  fitur: "#DFF0FF",
+  riset: "#DCFCE7",
+  kendala: "#FCE4EC",
 };
 
 export interface AppData {

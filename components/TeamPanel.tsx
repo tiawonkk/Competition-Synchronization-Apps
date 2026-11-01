@@ -97,15 +97,15 @@ export default function TeamPanel({
                 : "☁️ Tersinkron ke cloud";
 
   return (
-    <section className="card p-4 sm:p-5" aria-labelledby="team-h">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h2 id="team-h" className="text-sm font-semibold">Tim &amp; Pembina</h2>
-          <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11px] font-semibold text-white/70">
+    <section className="card p-6 sm:p-7" aria-labelledby="team-h">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 id="team-h" className="text-base font-bold tracking-tight">Tim &amp; Pembina</h2>
+          <span className="rounded-full bg-[#f3f2ee] px-3 py-1 text-xs font-semibold text-white/75 dark:bg-white/10">
             {team.length}/{MAX_TEAM} Anggota
           </span>
           <span
-            className={`text-[11px] ${cloud.mode === "off" || cloud.mode === "memory" ? "text-warn" : cloud.status === "error" || conflict ? "text-danger" : "text-white/45"}`}
+            className={`text-xs ${cloud.mode === "off" || cloud.mode === "memory" ? "text-[#78350f] dark:text-[#fcd34d]" : cloud.status === "error" || conflict ? "text-[#881337] dark:text-[#fda4af]" : "text-white/45"}`}
             role="status"
             title={cloud.detail}
           >
@@ -115,27 +115,27 @@ export default function TeamPanel({
             <button
               onClick={handleSyncNow}
               disabled={syncing || cloud.status === "syncing"}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] text-white/70 hover:bg-white/[0.08] hover:text-white transition disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-full border border-[#e4e2dc] bg-[#faf9f6] px-3 py-1 text-[11px] font-medium text-white/70 transition hover:bg-[#f0efea] hover:text-white disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04]"
               title="Periksa dan tarik perubahan terbaru dari cloud sekarang"
             >
-              <RotateCw size={11} className={syncing || cloud.status === "syncing" ? "animate-spin text-active" : ""} />
+              <RotateCw size={11} className={syncing || cloud.status === "syncing" ? "animate-spin" : ""} />
               <span>{syncing || cloud.status === "syncing" ? "Menyinkronkan…" : "Segarkan"}</span>
             </button>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 rounded-full border border-[#e4e2dc] bg-[#faf9f6] px-3.5 py-1.5 text-xs dark:border-white/10 dark:bg-white/[0.04]">
             <span className="text-white/50">Kode Invite:</span>
             <strong className="font-mono tracking-wider">{comp.inviteCode}</strong>
           </span>
-          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={copyCode}>
-            <Link2 size={14} /> {copied ? "Tersalin!" : "📋 Salin Kode"}
+          <button className="btn-ghost !px-3.5 !py-1.5 text-xs" onClick={copyCode}>
+            <Link2 size={14} /> {copied ? "Tersalin!" : "Salin Kode"}
           </button>
-          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={copyLink}>
-            <Share2 size={14} /> {linkCopied ? "Link tersalin!" : "🔗 Salin Link Undangan"}
+          <button className="btn-ghost !px-3.5 !py-1.5 text-xs" onClick={copyLink}>
+            <Share2 size={14} /> {linkCopied ? "Link tersalin!" : "Salin Link Undangan"}
           </button>
           {!finished && (
-            <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setInvite(true)} disabled={full} title={full ? `Tim penuh (maksimal ${MAX_TEAM} anggota)` : undefined}>
+            <button className="btn-primary !px-3.5 !py-1.5 text-xs" onClick={() => setInvite(true)} disabled={full} title={full ? `Tim penuh (maksimal ${MAX_TEAM} anggota)` : undefined}>
               <UserPlus size={14} /> Undang Anggota
             </button>
           )}
@@ -143,20 +143,20 @@ export default function TeamPanel({
       </div>
 
       {conflict && (
-        <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+        <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#fbcfe8] bg-[#fce4ec] px-4 py-3 text-xs text-[#881337] dark:border-[#522437] dark:bg-[#331924] dark:text-[#fda4af]">
           <span>
             Kode <strong className="font-mono">{comp.inviteCode}</strong> sudah dipakai lomba lain di cloud, jadi lomba ini belum tersinkron dan anggota yang memakai kode itu masuk ke lomba yang berbeda.
             {isLeader ? " Buat kode baru lalu bagikan ulang." : " Minta Ketua membuat kode baru."}
           </span>
           {isLeader && (
-            <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={newCode}>
+            <button className="btn-primary !px-3.5 !py-1.5 text-xs" onClick={newCode}>
               Buat Kode Baru
             </button>
           )}
         </div>
       )}
 
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {team.map((m) => {
           const u = data.users.find((x) => x.id === m.userId) ?? {
             id: m.userId,
@@ -167,27 +167,34 @@ export default function TeamPanel({
           const canEditRole = !finished && (isLeader || m.userId === me);
           const roles = m.teamRole && !(TEAM_ROLES as readonly string[]).includes(m.teamRole) ? [m.teamRole, ...TEAM_ROLES] : TEAM_ROLES;
           return (
-            <li key={m.userId} className={`rounded-2xl border p-3 transition ${active ? "border-active bg-active/[0.06]" : "border-white/10 bg-white/[0.03]"}`}>
-              <div className="flex items-start gap-2">
+            <li
+              key={m.userId}
+              className={`rounded-[24px] border p-4 transition-all ${
+                active
+                  ? "border-[#141416] bg-[#ece6ff]/45 ring-2 ring-[#141416]/10 dark:border-[#f4f4f6] dark:bg-[#251f38]/50"
+                  : "border-[#eae8e1] bg-[#faf9f6] hover:bg-[#ffffff] dark:border-white/10 dark:bg-[#202024]"
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
                 <button
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                   onClick={() => onAssignee(active ? "all" : u.id)}
                   aria-pressed={active}
                   title="Tampilkan hanya tugas anggota ini"
                 >
-                  <Avatar user={u} size={34} />
+                  <Avatar user={u} size={36} />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{u.fullName}</span>
+                    <span className="block truncate text-sm font-bold">{u.fullName}</span>
                     {m.role === "leader" ? (
-                      <span className="text-[11px] font-semibold text-warn">★ Lead</span>
+                      <span className="inline-block rounded-full bg-[#fef4c7] px-2 py-0.5 text-[10px] font-bold text-[#78350f] dark:bg-[#302615] dark:text-[#fcd34d]">★ Lead</span>
                     ) : (
-                      <span className="text-[11px] text-white/45">Anggota</span>
+                      <span className="text-[11px] text-white/50">Anggota</span>
                     )}
                   </span>
                 </button>
                 {isLeader && m.role !== "leader" && !finished && (
                   <button
-                    className="rounded-lg p-1.5 text-white/35 hover:bg-danger/15 hover:text-danger"
+                    className="rounded-full p-1.5 text-white/35 hover:bg-[#fce4ec] hover:text-[#881337] dark:hover:bg-[#331924] dark:hover:text-[#fda4af]"
                     onClick={async () => {
                       const ok = await confirm({
                         title: `Keluarkan ${u.fullName}?`,
@@ -207,7 +214,7 @@ export default function TeamPanel({
                 )}
               </div>
               <select
-                className="field mt-2.5 !py-1.5 text-xs"
+                className="field mt-3 !rounded-xl !bg-[#ffffff] !py-1.5 text-xs dark:!bg-[#18181b]"
                 value={m.teamRole ?? ""}
                 disabled={!canEditRole}
                 onChange={(e) => dispatch({ type: "setTeamRole", competitionId, userId: u.id, teamRole: e.target.value })}
@@ -218,18 +225,18 @@ export default function TeamPanel({
                   <option key={r}>{r}</option>
                 ))}
               </select>
-              <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-semibold">
+              <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] font-semibold">
                 {u.emailMicrosoft && (
-                  <span className="rounded-md bg-active/15 px-1.5 py-0.5 text-active" title={u.emailMicrosoft}>
+                  <span className="rounded-full bg-[#dff0ff] px-2.5 py-0.5 text-[#1e3a8a] dark:bg-[#172736] dark:text-[#93c5fd]" title={u.emailMicrosoft}>
                     M365 ✓
                   </span>
                 )}
                 {u.emailGoogle && (
-                  <span className="rounded-md bg-safe/15 px-1.5 py-0.5 text-safe" title={u.emailGoogle}>
+                  <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[#14532d] dark:bg-[#142e22] dark:text-[#86efac]" title={u.emailGoogle}>
                     GCal ✓
                   </span>
                 )}
-                {!u.emailMicrosoft && !u.emailGoogle && <span className="rounded-md bg-white/[0.07] px-1.5 py-0.5 text-white/45">Kalender belum terhubung</span>}
+                {!u.emailMicrosoft && !u.emailGoogle && <span className="rounded-full bg-[#f0efea] px-2.5 py-0.5 text-white/45 dark:bg-white/10">Kalender belum terhubung</span>}
               </div>
             </li>
           );
@@ -237,44 +244,44 @@ export default function TeamPanel({
 
         <li>
           {comp.advisorEmail || comp.advisorName ? (
-            <div className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="flex h-full flex-col rounded-[24px] border border-[#eae8e1] bg-[#faf9f6] p-4 dark:border-white/10 dark:bg-[#202024]">
               <div className="flex items-start justify-between gap-2">
-                <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-active/15 text-active">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#ece6ff] text-[#3b1d8f] dark:bg-[#251f38] dark:text-[#c4b5fd]">
                   <GraduationCap size={18} />
                 </span>
                 {isLeader && !finished && (
-                  <button className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white" onClick={() => setAdvisorOpen(true)} aria-label="Ubah data Pembina">
+                  <button className="rounded-full p-1.5 text-white/40 hover:bg-[#f0efea] hover:text-white dark:hover:bg-white/10" onClick={() => setAdvisorOpen(true)} aria-label="Ubah data Pembina">
                     <Pencil size={14} />
                   </button>
                 )}
               </div>
-              <div className="mt-2 min-w-0">
-                <div className="truncate text-sm font-semibold">{comp.advisorName || "Dosen Pembina"}</div>
-                <div className="truncate text-[11px] text-white/50" title={comp.advisorEmail}>
+              <div className="mt-2.5 min-w-0">
+                <div className="truncate text-sm font-bold">{comp.advisorName || "Dosen Pembina"}</div>
+                <div className="truncate text-xs text-white/50" title={comp.advisorEmail}>
                   {comp.advisorEmail || "Email belum diisi"}
                 </div>
               </div>
-              <button className="btn-ghost mt-auto !justify-center !py-1.5 text-xs" onClick={onReport} style={{ marginTop: "0.75rem" }}>
+              <button className="btn-ghost mt-auto !justify-center !py-1.5 text-xs" onClick={onReport} style={{ marginTop: "0.85rem" }}>
                 <Send size={13} /> Kirim Laporan
               </button>
             </div>
           ) : isLeader && !finished ? (
             <button
-              className="grid h-full min-h-[8rem] w-full place-items-center rounded-2xl border border-dashed border-white/20 p-3 text-center transition hover:border-active hover:bg-active/[0.06]"
+              className="grid h-full min-h-[8.5rem] w-full place-items-center rounded-[24px] border border-dashed border-[#d4d2ca] bg-[#faf9f6]/60 p-4 text-center transition hover:border-[#141416] hover:bg-[#ffffff] dark:border-white/20 dark:bg-white/[0.02]"
               onClick={() => setAdvisorOpen(true)}
             >
               <span>
-                <span className="mx-auto mb-1 grid h-9 w-9 place-items-center rounded-full bg-active/15 text-active">
+                <span className="mx-auto mb-1.5 grid h-10 w-10 place-items-center rounded-full bg-[#ece6ff] text-[#3b1d8f] dark:bg-[#251f38] dark:text-[#c4b5fd]">
                   <GraduationCap size={18} />
                 </span>
-                <span className="block text-sm font-semibold text-active">+ Atur Dosen Pembina</span>
-                <span className="block text-[11px] text-white/45">Nama dan email untuk laporan</span>
+                <span className="block text-sm font-bold">+ Atur Dosen Pembina</span>
+                <span className="mt-0.5 block text-xs text-white/50">Nama dan email untuk laporan</span>
               </span>
             </button>
           ) : (
-            <div className="grid h-full min-h-[8rem] place-items-center rounded-2xl border border-dashed border-white/15 p-3 text-center text-xs text-white/45">
+            <div className="grid h-full min-h-[8.5rem] place-items-center rounded-[24px] border border-dashed border-[#d4d2ca] p-4 text-center text-xs text-white/45 dark:border-white/15">
               <span>
-                <GraduationCap size={18} className="mx-auto mb-1" />
+                <GraduationCap size={18} className="mx-auto mb-1.5" />
                 Pembina belum diisi. Minta Ketua mengaturnya.
               </span>
             </div>
@@ -321,8 +328,8 @@ function InviteModal({ open, onClose, competitionId }: { open: boolean; onClose:
 
   return (
     <Modal open={open} onClose={onClose} title="Undang Anggota">
-      <div className="space-y-3 p-5">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-4 p-6">
+        <div className="grid grid-cols-2 gap-3.5">
           <div>
             <label className="label" htmlFor="iv-name">Nama (opsional)</label>
             <input id="iv-name" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="mis. Salsabila" />
@@ -344,9 +351,9 @@ function InviteModal({ open, onClose, competitionId }: { open: boolean; onClose:
         <div>
           <span className="label">Pesan undangan</span>
           <textarea readOnly rows={5} className="field resize-none" value={message} aria-label="Pesan undangan" />
-          <p className="mt-1 text-[11px] text-white/45">Aplikasi tidak mengirim email sendiri. Salin pesan ini ke WhatsApp, atau buka di aplikasi email Anda.</p>
+          <p className="mt-1.5 text-[11px] text-white/45">Aplikasi tidak mengirim email sendiri. Salin pesan ini ke WhatsApp, atau buka di aplikasi email Anda.</p>
         </div>
-        <div className="flex flex-wrap justify-end gap-2 pt-1">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           <button className="btn-ghost" onClick={copy}>
             <Copy size={15} /> {copied ? "Tersalin!" : "Salin Pesan"}
           </button>
@@ -389,7 +396,7 @@ function AdvisorModal({ open, onClose, competitionId }: { open: boolean; onClose
 
   return (
     <Modal open={open} onClose={onClose} title="Dosen Pembina">
-      <div className="space-y-3 p-5">
+      <div className="space-y-4 p-6">
         <div>
           <label className="label" htmlFor="ad-name">Nama Pembina</label>
           <input id="ad-name" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="mis. Dr. Hendra Wijaya" autoFocus />
@@ -400,7 +407,7 @@ function AdvisorModal({ open, onClose, competitionId }: { open: boolean; onClose
           {touched && bad && <p className="mt-1 text-xs text-danger">Format email belum valid.</p>}
         </div>
         <p className="text-xs text-white/45">Laporan mingguan, kabar lolos babak, dan laporan akhir dikirim ke email ini.</p>
-        <div className="flex justify-end gap-2 pt-1">
+        <div className="flex justify-end gap-2 pt-2">
           <button className="btn-ghost" onClick={onClose}>Batal</button>
           <button className="btn-primary" onClick={save}>Simpan</button>
         </div>
