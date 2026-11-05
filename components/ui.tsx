@@ -46,7 +46,7 @@ export function Badge({ tone = "neutral", children, pulse }: { tone?: Tone; chil
   const t = TONE[tone];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium leading-none ${t.text} ${t.bg} ${t.border} ${
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none ${t.text} ${t.bg} ${t.border} ${
         pulse ? "animate-pulse" : ""
       }`}
     >

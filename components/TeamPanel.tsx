@@ -98,10 +98,10 @@ export default function TeamPanel({
 
   return (
     <section className="card p-6 sm:p-7" aria-labelledby="team-h">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#eae8e1] pb-4 dark:border-white/[0.08]">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 id="team-h" className="text-base font-bold tracking-tight">Tim &amp; Pembina</h2>
-          <span className="rounded-full bg-[#f3f2ee] px-3 py-1 text-xs font-semibold text-white/75 dark:bg-white/10">
+          <span className="whitespace-nowrap rounded-full bg-[#f3f2ee] px-2.5 py-0.5 text-[11px] font-semibold text-white/75 dark:bg-white/10">
             {team.length}/{MAX_TEAM} Anggota
           </span>
           <span
@@ -115,7 +115,7 @@ export default function TeamPanel({
             <button
               onClick={handleSyncNow}
               disabled={syncing || cloud.status === "syncing"}
-              className="inline-flex items-center gap-1 rounded-full border border-[#e4e2dc] bg-[#faf9f6] px-3 py-1 text-[11px] font-medium text-white/70 transition hover:bg-[#f0efea] hover:text-white disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04]"
+              className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-[#e4e2dc] bg-[#faf9f6] px-2.5 py-0.5 text-[11px] font-medium text-white/70 transition hover:bg-[#f0efea] hover:text-white disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04]"
               title="Periksa dan tarik perubahan terbaru dari cloud sekarang"
             >
               <RotateCw size={11} className={syncing || cloud.status === "syncing" ? "animate-spin" : ""} />
@@ -124,19 +124,15 @@ export default function TeamPanel({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-full border border-[#e4e2dc] bg-[#faf9f6] px-3.5 py-1.5 text-xs dark:border-white/10 dark:bg-white/[0.04]">
-            <span className="text-white/50">Kode Invite:</span>
-            <strong className="font-mono tracking-wider">{comp.inviteCode}</strong>
-          </span>
-          <button className="btn-ghost !px-3.5 !py-1.5 text-xs" onClick={copyCode}>
-            <Link2 size={14} /> {copied ? "Tersalin!" : "Salin Kode"}
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={copyCode} title={`Kode undangan: ${comp.inviteCode}`}>
+            <Link2 size={13} /> {copied ? "Tersalin!" : `Kode: ${comp.inviteCode}`}
           </button>
-          <button className="btn-ghost !px-3.5 !py-1.5 text-xs" onClick={copyLink}>
-            <Share2 size={14} /> {linkCopied ? "Link tersalin!" : "Salin Link Undangan"}
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={copyLink}>
+            <Share2 size={13} /> {linkCopied ? "Link tersalin!" : "Salin Link Undangan"}
           </button>
           {!finished && (
             <button className="btn-primary !px-3.5 !py-1.5 text-xs" onClick={() => setInvite(true)} disabled={full} title={full ? `Tim penuh (maksimal ${MAX_TEAM} anggota)` : undefined}>
-              <UserPlus size={14} /> Undang Anggota
+              <UserPlus size={13} /> Undang Anggota
             </button>
           )}
         </div>

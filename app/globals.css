@@ -14,7 +14,7 @@
   --page-bg: #f6f5f0;
   --card-bg: #ffffff;
   --card-border: #eae8e1;
-  --card-shadow: 0 4px 24px -4px rgba(20, 20, 22, 0.04), 0 1px 3px 0 rgba(20, 20, 22, 0.02);
+  --card-shadow: 0 2px 16px -4px rgba(20, 20, 22, 0.04), 0 1px 2px 0 rgba(20, 20, 22, 0.02);
   --nav-bg: #ffffff;
   --nav-border: #eae8e1;
   --nav-fg: #141416;
@@ -68,7 +68,7 @@ body {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     box-shadow: var(--card-shadow);
-    @apply rounded-[28px] transition-all duration-200;
+    @apply rounded-[26px] transition-all duration-200;
   }
 
   .glass-panel {
@@ -78,8 +78,8 @@ body {
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all duration-150
-      disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 dark:focus-visible:ring-white/20;
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-150
+      disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 dark:focus-visible:ring-white/20;
   }
 
   .btn-primary {
@@ -103,9 +103,18 @@ body {
   }
 
   .field {
-    @apply w-full rounded-2xl border border-[#e4e2dc] bg-[#faf9f6] px-4 py-2.5 text-sm text-[#141416] placeholder:text-[#8e8e96]
-      focus:border-[#141416] focus:bg-[#ffffff] focus:outline-none focus:ring-2 focus:ring-[#141416]/10
-      dark:border-[#2e2e34] dark:bg-[#202024] dark:text-[#f4f4f6] dark:placeholder:text-[#71717a] dark:focus:border-[#f4f4f6] dark:focus:bg-[#18181b];
+    @apply w-full rounded-xl border border-[#e4e2dc] bg-[#faf9f6] px-3.5 py-2 text-sm text-[#141416] placeholder:text-[#8e8e96]
+      focus:border-[#a1a1aa] focus:bg-[#ffffff] focus:outline-none focus:ring-2 focus:ring-black/[0.06]
+      dark:border-[#2e2e34] dark:bg-[#202024] dark:text-[#f4f4f6] dark:placeholder:text-[#71717a] dark:focus:border-[#52525b] dark:focus:bg-[#18181b];
+  }
+
+  select.field {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 14px 14px;
+    padding-right: 2.25rem;
   }
 
   .label {

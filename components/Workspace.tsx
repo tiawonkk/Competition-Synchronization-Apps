@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BellRing, Calendar, CalendarDays, CheckCircle2, ChevronRight, ExternalLink, FilterX, Flag, KeyRound, Lock, Mail, Pencil, PlayCircle, Plus, Send, Trash2, Volume2, XCircle, Zap } from "lucide-react";
+import { BellRing, Calendar, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ExternalLink, FilterX, Flag, KeyRound, Lock, Mail, Pencil, PlayCircle, Plus, Send, Trash2, Volume2, XCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { OUTCOME_LABEL, STAGE_STATUS_LABEL } from "@/lib/evaluation";
 import { buildStageWork } from "@/lib/generator";
@@ -164,12 +164,12 @@ export default function Workspace({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header / Overview Card */}
-      <section className="card relative overflow-hidden p-6 sm:p-8">
-        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <Gauge value={score} size={116} color={TONE[scoreTone(score)].hex} label="Kesiapan" />
+      <section className="card relative overflow-hidden p-6 sm:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <Gauge value={score} size={104} color={TONE[scoreTone(score)].hex} label="Kesiapan" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="active">{comp.category}</Badge>
@@ -193,53 +193,61 @@ export default function Workspace({
                 )}
               </div>
 
-              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">{comp.title}</h1>
-              <p className="mt-1 text-sm text-white/55">{comp.theme || "Tema belum diisi"}</p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2.5 text-xs">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#e4e2dc] bg-[#f6f5f0] px-3.5 py-1.5 text-white/70 dark:border-[#2e2e34] dark:bg-[#222226]">
-                  <KeyRound size={13} className="text-white/50" />
-                  <span>Kode undangan:</span>
-                  <button
-                    onClick={copyCode}
-                    className="rounded-full bg-[#141416] px-2.5 py-0.5 font-mono text-[11px] font-bold tracking-wider text-[#ffffff] transition hover:opacity-85 dark:bg-[#f4f4f6] dark:text-[#141416]"
-                    title="Salin kode undangan"
-                  >
-                    {comp.inviteCode}
-                  </button>
-                  <span className="text-white/50">· {copied ? "Tersalin!" : `${team.length}/5 anggota`}</span>
-                </div>
-
-                <div className="inline-flex flex-wrap items-center gap-1.5 rounded-full border border-[#e4e2dc] bg-[#faf9f6] px-3.5 py-1.5 text-white/60 dark:border-[#2e2e34] dark:bg-[#202024]">
-                  <span>Deadline final: <strong className="font-semibold text-white/85">{fmtDateTime(comp.submissionDeadline)}</strong></span>
-                  <span>·</span>
-                  <span>{done}/{tasks.length} tugas selesai</span>
-                  <span>·</span>
-                  <span>{proofs} bukti terunggah</span>
-                </div>
-              </div>
+              <h1 className="mt-2.5 text-2xl font-bold tracking-tight sm:text-3xl">{comp.title}</h1>
+              <p className="mt-0.5 text-sm text-white/55">{comp.theme || "Tema belum diisi"}</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 xl:shrink-0">
+          <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
             {myRole === "leader" && (
               <button className="btn-ghost" onClick={onEdit}>
-                <Pencil size={15} /> Ubah Detail
+                <Pencil size={14} /> Ubah Detail
               </button>
             )}
             {myRole === "leader" && !finished && (
               <button className="btn-ghost" onClick={() => onEvaluate({ competitionId })}>
-                <Flag size={15} /> Selesaikan Lomba
+                <Flag size={14} /> Selesaikan Lomba
               </button>
             )}
             {finished && (
               <button className="btn-ghost" onClick={() => onEvaluate({ competitionId })}>
-                <Flag size={15} /> Lihat Evaluasi
+                <Flag size={14} /> Lihat Evaluasi
               </button>
             )}
             <button className="btn-primary" onClick={onReport}>
-              <Mail size={16} /> Laporan Pembina
+              <Mail size={15} /> Laporan Pembina
             </button>
+          </div>
+        </div>
+
+        {/* Bottom Metadata Strip */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#eae8e1] pt-4 text-xs text-white/60 dark:border-white/[0.08]">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2">
+              <KeyRound size={13} className="text-white/45" />
+              <span>Kode undangan:</span>
+              <button
+                onClick={copyCode}
+                className="rounded-md bg-[#141416] px-2 py-0.5 font-mono text-[11px] font-bold tracking-wider text-[#ffffff] transition hover:opacity-85 dark:bg-[#f4f4f6] dark:text-[#141416]"
+                title="Salin kode undangan"
+              >
+                {comp.inviteCode}
+              </button>
+              <span className="text-white/45">{copied ? "Tersalin!" : `${team.length}/5 anggota`}</span>
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-white/55">
+            <span>
+              Deadline final: <strong className="font-semibold text-white/85">{fmtDateTime(comp.submissionDeadline)}</strong>
+            </span>
+            <span>·</span>
+            <span>
+              <strong className="font-semibold text-white/85">{done}/{tasks.length}</strong> tugas selesai
+            </span>
+            <span>·</span>
+            <span>
+              <strong className="font-semibold text-white/85">{proofs}</strong> bukti terunggah
+            </span>
           </div>
         </div>
       </section>
@@ -247,7 +255,7 @@ export default function Workspace({
       {/* Stage-gate pipeline */}
       <section className="card p-6 sm:p-7" aria-labelledby="pipe-h">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="pipe-h" className="text-base font-bold tracking-tight">Alur Babak Lomba</h2>
+          <h2 id="pipe-h" className="text-sm font-bold tracking-tight">Alur Babak Lomba</h2>
           {myRole === "leader" && !finished && (
             <button className="btn-ghost !px-3.5 !py-1.5 text-xs" onClick={onAddStage}>
               <Plus size={14} /> Tambah Babak
@@ -276,12 +284,12 @@ export default function Workspace({
                     ? "text-[#3b1d8f] dark:text-[#c4b5fd]"
                     : "text-white/45";
             return (
-              <li key={s.id} className="flex items-center gap-2.5">
+              <li key={s.id} className="flex items-center gap-2">
                 <button
                   onClick={() => setStageSel(s.id)}
                   aria-current={isSelected ? "step" : undefined}
                   style={bgStyle}
-                  className={`min-w-[12.5rem] rounded-[24px] border px-4 py-3.5 text-left transition-all ${
+                  className={`min-w-[12rem] rounded-[20px] border px-4 py-3 text-left transition-all ${
                     !bgStyle ? "bg-[#f6f5f0] dark:bg-[#222226]" : ""
                   } ${
                     isSelected
@@ -289,7 +297,7 @@ export default function Workspace({
                       : "border-black/[0.06] hover:border-black/20 dark:border-white/10"
                   }`}
                 >
-                  <span className={`inline-flex items-center gap-1.5 rounded-full bg-[#ffffff]/75 px-2.5 py-0.5 text-[11px] font-semibold dark:bg-[#141416]/40 ${statusText}`}>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full bg-[#ffffff]/80 px-2.5 py-0.5 text-[11px] font-semibold dark:bg-[#141416]/40 ${statusText}`}>
                     <StageIcon size={13} /> {dropped ? "Tidak dilanjutkan" : STAGE_STATUS_LABEL[s.status]}
                   </span>
                   <span className="mt-2 block truncate text-sm font-bold">{s.name}</span>
@@ -310,19 +318,19 @@ export default function Workspace({
 
         {myRole === "leader" && !finished && activeStage && (
           <div
-            className={`mt-5 flex flex-wrap items-center justify-between gap-4 rounded-[22px] border px-5 py-4 ${
+            className={`mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3.5 ${
               stageDone
                 ? "border-[#bbf7d0] bg-[#dcfce7]/60 dark:border-[#1f4e38] dark:bg-[#142e22]/60"
                 : "border-[#eae8e1] bg-[#faf9f6] dark:border-white/10 dark:bg-[#202024]"
             }`}
           >
-            <div>
+            <div className="min-w-0">
               <div className="text-sm font-bold">
                 {stageDone ? `Semua tugas ${activeStage.name} selesai. Bagaimana hasil babak ini?` : `Keputusan hasil ${activeStage.name}`}
               </div>
               {!stageDone && <p className="mt-0.5 text-xs text-white/55">Tekan setelah panitia mengumumkan hasil, bahkan bila masih ada tugas yang terbuka.</p>}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {nextStage ? (
                 <button className="btn-safe" onClick={advance}>
                   🎉 Lolos ke {nextStage.name}
@@ -340,7 +348,7 @@ export default function Workspace({
         )}
       </section>
 
-      <div className="flex flex-wrap gap-1.5 rounded-full border border-[#e4e2dc] bg-[#efede7] p-1.5 sm:w-fit dark:border-white/10 dark:bg-[#202024]" role="tablist">
+      <div className="flex flex-wrap gap-1 rounded-full border border-[#e4e2dc] bg-[#efede7] p-1 sm:w-fit dark:border-white/10 dark:bg-[#202024]" role="tablist">
         {([
           ["tasks", "Tugas & Milestone"],
           ["board", "Whiteboard & Ideasi"],
@@ -351,7 +359,7 @@ export default function Workspace({
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`flex-1 rounded-full px-5 py-2 text-sm font-semibold transition-all sm:flex-none ${
+            className={`flex-1 rounded-full px-5 py-2 text-xs font-semibold transition-all sm:flex-none ${
               tab === id
                 ? "bg-[#141416] text-[#ffffff] shadow-sm dark:bg-[#f4f4f6] dark:text-[#141416]"
                 : "text-[#52525b] hover:text-[#141416] dark:text-[#a1a1aa] dark:hover:text-[#f4f4f6]"
@@ -367,24 +375,29 @@ export default function Workspace({
       ) : tab === "vault" ? (
         <CloudVault competitionId={competitionId} />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <TeamPanel competitionId={competitionId} assignee={assignee} onAssignee={setAssignee} onReport={onReport} />
 
           {comp.guide && <GuideCard guide={comp.guide} />}
 
           {/* Milestones & tasks, with the calendar beside them */}
-          <div className={`grid gap-6 ${showCal ? "lg:grid-cols-[minmax(0,1fr)_22rem]" : ""}`}>
+          <div className={`grid gap-5 ${showCal ? "lg:grid-cols-[minmax(0,1fr)_22rem]" : ""}`}>
             <div className="min-w-0">
               {sel?.status === "upcoming" ? (
                 <LockedStage stage={sel} finished={finished} />
               ) : (
                 <section className="card p-6 sm:p-7" aria-labelledby="task-h">
-                  <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#eae8e1] pb-4 dark:border-white/[0.08]">
                     <h2 id="task-h" className="text-base font-bold tracking-tight">
                       Milestone &amp; Tugas{sel ? ` · ${sel.name}` : ""}
                     </h2>
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <select className="field !w-auto !rounded-full !py-1.5 text-xs" value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="Filter penanggung jawab">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        className="field !w-auto !rounded-full !bg-[#ffffff] !py-1.5 !pl-3.5 text-xs font-medium dark:!bg-[#222226]"
+                        value={assignee}
+                        onChange={(e) => setAssignee(e.target.value)}
+                        aria-label="Filter penanggung jawab"
+                      >
                         <option value="all">Semua anggota</option>
                         <option value={me}>Tugas saya</option>
                         {team
@@ -396,11 +409,11 @@ export default function Workspace({
                           ))}
                       </select>
                       <button className="btn-ghost !px-3.5 !py-1.5 text-xs" onClick={() => setShowCal((v) => !v)} aria-pressed={showCal}>
-                        <CalendarDays size={14} /> {showCal ? "Sembunyikan Kalender" : "Tampilkan Kalender & Penanda"}
+                        <CalendarDays size={14} /> {showCal ? "Sembunyikan Kalender" : "Tampilkan Kalender"}
                       </button>
-                      <label className="flex cursor-pointer items-center gap-1.5 text-xs text-white/60">
+                      <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-[#e4e2dc] bg-[#faf9f6] px-3 py-1.5 text-xs font-medium text-white/70 dark:border-white/10 dark:bg-[#202024]">
                         <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="accent-[#141416] dark:accent-[#f4f4f6]" />
-                        Tampilkan selesai
+                        Selesai
                       </label>
                     </div>
                   </div>
@@ -425,46 +438,55 @@ export default function Workspace({
                       const pastelBg = PASTEL_VARS[idx % PASTEL_VARS.length];
                       return (
                         <div key={m.id}>
-                          <div className="mb-3 flex flex-wrap items-center gap-3">
-                            <span
-                              className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold text-white"
-                              style={{ background: pastelBg }}
-                            >
-                              {m.orderIndex + 1}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-bold">{m.title}</div>
-                              <div className="text-xs text-white/45">Target {fmtDate(m.targetDate)}</div>
-                            </div>
-                            <span className="text-xs font-medium tabular-nums text-white/55">
-                              {mDone}/{mt.length}
-                            </span>
-                            <div className="h-2 w-24 overflow-hidden rounded-full bg-[#efede7] dark:bg-white/10">
-                              <motion.div
-                                className="h-full rounded-full bg-[#22c55e]"
-                                initial={false}
-                                animate={{ width: `${mt.length ? (mDone / mt.length) * 100 : 0}%` }}
-                              />
-                            </div>
-                            {canStructure && (
-                              <div className="flex shrink-0 items-center gap-1.5">
-                                <button
-                                  className="flex items-center gap-1 rounded-full bg-[#141416] px-3 py-1.5 text-[11px] font-semibold text-[#ffffff] transition hover:bg-[#27272a] dark:bg-[#f4f4f6] dark:text-[#141416]"
-                                  onClick={() => setTaskForm({ competitionId, stageId: sel!.id, milestoneId: m.id })}
-                                >
-                                  <Plus size={12} /> Tambah Tugas
-                                </button>
-                                <button
-                                  className="rounded-full p-2 text-white/45 hover:bg-[#f4f3ee] hover:text-white dark:hover:bg-white/10"
-                                  onClick={() => setMsForm({ competitionId, stageId: sel!.id, milestoneId: m.id })}
-                                  aria-label={`Edit milestone ${m.title}`}
-                                >
-                                  <Pencil size={14} />
-                                </button>
+                          {/* Milestone Header */}
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <span
+                                className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold text-white"
+                                style={{ background: pastelBg }}
+                              >
+                                {m.orderIndex + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-bold">{m.title}</div>
+                                <div className="text-xs text-white/45">Target {fmtDate(m.targetDate)}</div>
                               </div>
-                            )}
+                            </div>
+
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold tabular-nums text-white/55">
+                                  {mDone}/{mt.length}
+                                </span>
+                                <div className="h-2 w-20 overflow-hidden rounded-full bg-[#efede7] dark:bg-white/10">
+                                  <motion.div
+                                    className="h-full rounded-full bg-[#22c55e]"
+                                    initial={false}
+                                    animate={{ width: `${mt.length ? (mDone / mt.length) * 100 : 0}%` }}
+                                  />
+                                </div>
+                              </div>
+                              {canStructure && (
+                                <div className="flex shrink-0 items-center gap-1">
+                                  <button
+                                    className="btn-primary !px-3 !py-1.5 text-[11px]"
+                                    onClick={() => setTaskForm({ competitionId, stageId: sel!.id, milestoneId: m.id })}
+                                  >
+                                    <Plus size={12} /> Tambah Tugas
+                                  </button>
+                                  <button
+                                    className="rounded-full p-1.5 text-white/45 hover:bg-[#f4f3ee] hover:text-white dark:hover:bg-white/10"
+                                    onClick={() => setMsForm({ competitionId, stageId: sel!.id, milestoneId: m.id })}
+                                    aria-label={`Edit milestone ${m.title}`}
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <ul className="space-y-2.5">
+
+                          <ul className="space-y-3">
                             {rows.map((t) => (
                               <TaskRow
                                 key={t.id}
@@ -477,16 +499,16 @@ export default function Workspace({
                             ))}
                             {rows.length === 0 &&
                               (canStructure && !dateFilter && assignee === "all" ? (
-                                <li className="pl-11">
+                                <li>
                                   <button
-                                    className="flex items-center gap-1.5 rounded-full border border-dashed border-[#d4d2ca] px-4 py-2 text-xs font-semibold text-white/70 hover:bg-[#f4f3ee] dark:border-white/20 dark:hover:bg-white/10"
+                                    className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[#d4d2ca] py-3 text-xs font-semibold text-white/65 hover:bg-[#f4f3ee] dark:border-white/20 dark:hover:bg-white/10"
                                     onClick={() => setTaskForm({ competitionId, stageId: sel!.id, milestoneId: m.id })}
                                   >
                                     <Plus size={13} /> Buat pekerjaan pertama di milestone ini
                                   </button>
                                 </li>
                               ) : (
-                                <li className="pl-11 text-xs text-white/40">Tidak ada tugas.</li>
+                                <li className="py-2 text-xs text-white/40">Tidak ada tugas.</li>
                               ))}
                           </ul>
                         </div>
@@ -550,106 +572,52 @@ function TaskRow({
   return (
     <motion.li
       layout
-      className={`rounded-[22px] border p-4 transition-all ${
+      className={`rounded-[20px] border p-4 transition-all ${
         hot
-          ? "border-[#fbcfe8] bg-[#fce4ec]/45 dark:border-[#522437] dark:bg-[#331924]/50"
+          ? "border-[#fbcfe8] bg-[#fce4ec]/40 dark:border-[#522437] dark:bg-[#331924]/50"
           : task.isCompleted
             ? "border-[#eae8e1] bg-[#f6f5f0]/60 dark:border-white/[0.05] dark:bg-white/[0.02]"
             : "border-[#eae8e1] bg-[#faf9f6] hover:bg-[#ffffff] hover:shadow-sm dark:border-white/[0.08] dark:bg-[#202024] dark:hover:bg-[#25252a]"
       }`}
     >
-      <div className="flex flex-wrap items-start gap-3.5">
+      {/* Top Tier: Icon + Full-width Title & Description + subtle Edit/Delete icons */}
+      <div className="flex items-start gap-3.5">
         <span
           className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ${
             task.isCompleted
               ? "bg-[#dcfce7] text-[#14532d] dark:bg-[#142e22] dark:text-[#86efac]"
               : hot
                 ? "bg-[#fce4ec] text-[#881337] dark:bg-[#331924] dark:text-[#fda4af]"
-                : "bg-[#f0efea] text-white/50 dark:bg-white/10"
+                : "bg-[#efede7] text-white/55 dark:bg-white/10"
           }`}
         >
           {task.isCompleted ? <CheckCircle2 size={16} /> : hot ? <BellRing size={16} className="animate-ring" /> : <Calendar size={16} />}
         </span>
+
         <div className="min-w-0 flex-1">
-          <div className={`text-sm font-semibold ${task.isCompleted ? "text-white/45 line-through" : ""}`}>{task.title}</div>
-          {task.description && <div className="mt-1 text-xs leading-relaxed text-white/50">{task.description}</div>}
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            {user && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f0efea] py-0.5 pl-1 pr-2.5 text-xs font-medium text-white/75 dark:bg-white/10">
-                <Avatar user={user} size={18} /> {user.fullName.split(" ")[0]}
-              </span>
-            )}
-            <Badge tone={PRIORITY_TONE[task.priority]}>{PRIORITY_LABEL[task.priority]}</Badge>
-            <Badge tone={tone} pulse={hot}>
-              {task.isCompleted ? `Selesai ${fmtDate(task.completedAt!)}` : `${fmtDateTime(task.dueDate)} · ${relative(task.dueDate, now)}`}
-            </Badge>
-            {task.sourceNoteId && <Badge tone="warn">💡 Dari whiteboard</Badge>}
-            {task.rescheduledFrom && !task.isCompleted && (
-              <span title={`Semula ${fmtDateTime(task.rescheduledFrom)}`}>
-                <Badge tone="safe">
-                  <Zap size={11} /> Dijadwal ulang AI
-                </Badge>
-              </span>
-            )}
-            {task.gcalEventId && !task.isCompleted && (
-              <span title="Terjadwal di Google Calendar" className="rounded-full bg-[#f0efea] px-2 py-0.5 text-[10px] font-medium text-white/60 dark:bg-white/10">
-                GCal
-              </span>
-            )}
-            {task.outlookEventId && !task.isCompleted && (
-              <span title="Terjadwal di Outlook" className="rounded-full bg-[#dff0ff] px-2 py-0.5 text-[10px] font-medium text-[#1e3a8a] dark:bg-[#172736] dark:text-[#93c5fd]">
-                Outlook
-              </span>
-            )}
-            {task.isCompleted && (task.gcalEventId || task.outlookEventId) && <span className="text-[10px] text-white/35">pengingat kalender dinonaktifkan</span>}
-            {task.proofUrl && (
-              <a href={task.proofUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs font-semibold text-[#14532d] hover:underline dark:text-[#86efac]">
-                <ExternalLink size={12} /> Bukti
-              </a>
-            )}
+          <div className={`text-sm font-bold leading-snug ${task.isCompleted ? "text-white/45 line-through" : ""}`}>
+            {task.title}
           </div>
+          {task.description && (
+            <p className="mt-1 text-xs leading-relaxed text-white/55">
+              {task.description}
+            </p>
+          )}
         </div>
-        {!task.isCompleted && (
-          <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-center">
-            {isLeader && (
-              <select
-                className="field !w-auto !rounded-full !py-1.5 text-xs"
-                value={task.assignedTo ?? ""}
-                onChange={(e) => dispatch({ type: "assign", taskId: task.id, userId: e.target.value })}
-                aria-label={`Ubah penanggung jawab: ${task.title}`}
-              >
-                {team.map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {data.users.find((u) => u.id === m.userId)?.fullName.split(" ")[0]}
-                  </option>
-                ))}
-              </select>
-            )}
-            {mine && (
-              <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onTestAlarm(task.id)} title="Uji alarm berdering untuk tugas ini">
-                <Volume2 size={14} /> Uji Alarm
-              </button>
-            )}
-            {(mine || data.members.some((m) => m.competitionId === task.competitionId && m.userId === me && m.role === "leader")) && (
-              <button className={hot ? "btn-danger !px-3 !py-1.5 text-xs" : "btn-safe !px-3 !py-1.5 text-xs"} onClick={() => onComplete(task.id)}>
-                <Send size={13} /> Selesai
-              </button>
-            )}
-          </div>
-        )}
+
         {!readOnly && (isLeader || mine) && (
-          <div className="flex shrink-0 gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             <button
-              className="rounded-full p-2 text-white/45 hover:bg-[#f0efea] hover:text-white dark:hover:bg-white/10"
+              className="rounded-full p-1.5 text-white/40 transition hover:bg-[#efede7] hover:text-white dark:hover:bg-white/10"
               onClick={() => onEditTask(task)}
               aria-label={`Edit tugas ${task.title}`}
               title="Edit tugas"
             >
-              <Pencil size={15} />
+              <Pencil size={14} />
             </button>
             {isLeader && (
               <button
-                className="rounded-full p-2 text-white/45 hover:bg-[#fce4ec] hover:text-[#881337] dark:hover:bg-[#331924] dark:hover:text-[#fda4af]"
+                className="rounded-full p-1.5 text-white/40 transition hover:bg-[#fce4ec] hover:text-[#881337] dark:hover:bg-[#331924] dark:hover:text-[#fda4af]"
                 onClick={async () => {
                   const ok = await confirm({
                     title: "Hapus tugas ini?",
@@ -664,7 +632,82 @@ function TaskRow({
                 aria-label={`Hapus tugas ${task.title}`}
                 title="Hapus tugas"
               >
-                <Trash2 size={15} />
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Tier: Unified Assignee Pill + Metadata Badges on Left, Actions on Right */}
+      <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2.5 border-t border-[#eae8e1]/80 pt-3 pl-11 dark:border-white/[0.06]">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* Unified Assignee Pill (interactive for Leader, static for Member) */}
+          {isLeader && !task.isCompleted ? (
+            <label className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#e4e2dc] bg-[#ffffff] py-0.5 pl-1 pr-6 text-[11px] font-semibold text-white/85 transition hover:border-[#a1a1aa] dark:border-white/15 dark:bg-[#18181b]">
+              {user && <Avatar user={user} size={18} />}
+              <select
+                className="cursor-pointer appearance-none bg-transparent pr-1 font-semibold outline-none"
+                value={task.assignedTo ?? ""}
+                onChange={(e) => dispatch({ type: "assign", taskId: task.id, userId: e.target.value })}
+                aria-label={`Ubah penanggung jawab: ${task.title}`}
+              >
+                {team.map((m) => (
+                  <option key={m.userId} value={m.userId} className="bg-[#ffffff] text-[#141416] dark:bg-[#18181b] dark:text-[#f4f4f6]">
+                    {data.users.find((u) => u.id === m.userId)?.fullName.split(" ")[0]}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={12} className="pointer-events-none absolute right-2 text-white/45" />
+            </label>
+          ) : (
+            user && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#e4e2dc] bg-[#f3f2ee] py-0.5 pl-1 pr-2.5 text-[11px] font-semibold text-white/75 dark:border-white/10 dark:bg-white/10">
+                <Avatar user={user} size={18} /> {user.fullName.split(" ")[0]}
+              </span>
+            )
+          )}
+
+          <Badge tone={PRIORITY_TONE[task.priority]}>{PRIORITY_LABEL[task.priority]}</Badge>
+          <Badge tone={tone} pulse={hot}>
+            {task.isCompleted ? `Selesai ${fmtDate(task.completedAt!)}` : `${fmtDateTime(task.dueDate)} · ${relative(task.dueDate, now)}`}
+          </Badge>
+          {task.sourceNoteId && <Badge tone="warn">💡 Dari whiteboard</Badge>}
+          {task.rescheduledFrom && !task.isCompleted && (
+            <span title={`Semula ${fmtDateTime(task.rescheduledFrom)}`}>
+              <Badge tone="safe">
+                <Zap size={11} /> Dijadwal ulang AI
+              </Badge>
+            </span>
+          )}
+          {task.gcalEventId && !task.isCompleted && (
+            <span title="Terjadwal di Google Calendar" className="whitespace-nowrap rounded-full bg-[#efede7] px-2 py-0.5 text-[10px] font-semibold text-white/60 dark:bg-white/10">
+              GCal
+            </span>
+          )}
+          {task.outlookEventId && !task.isCompleted && (
+            <span title="Terjadwal di Outlook" className="whitespace-nowrap rounded-full bg-[#dff0ff] px-2 py-0.5 text-[10px] font-semibold text-[#1e3a8a] dark:bg-[#172736] dark:text-[#93c5fd]">
+              Outlook
+            </span>
+          )}
+          {task.isCompleted && (task.gcalEventId || task.outlookEventId) && <span className="text-[10px] text-white/35">pengingat kalender nonaktif</span>}
+          {task.proofUrl && (
+            <a href={task.proofUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-[#14532d] hover:underline dark:text-[#86efac]">
+              <ExternalLink size={12} /> Bukti
+            </a>
+          )}
+        </div>
+
+        {!task.isCompleted && (
+          <div className="flex shrink-0 items-center gap-2 ml-auto">
+            {mine && (
+              <button className="btn-ghost !px-3 !py-1 text-[11px]" onClick={() => onTestAlarm(task.id)} title="Uji alarm berdering untuk tugas ini">
+                <Volume2 size={13} /> Uji Alarm
+              </button>
+            )}
+            {(mine || isLeader) && (
+              <button className={hot ? "btn-danger !px-3.5 !py-1 text-[11px]" : "btn-safe !px-3.5 !py-1 text-[11px]"} onClick={() => onComplete(task.id)}>
+                <Send size={12} /> Selesai
               </button>
             )}
           </div>
